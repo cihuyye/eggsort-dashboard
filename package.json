@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "start": "concurrently -n \"FLASK-API,VUE-UI\" -c \"cyan,green\" \"C:\\Users\\lenovo\\AppData\\Local\\Python\\bin\\python.exe \\\"D:\\Egg Sorting System\\app_flask.py\\\"\" \"vite\"",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -16,6 +17,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.10",
+    "concurrently": "^10.0.6",
     "vite": "^8.3.6"
   }
 }
