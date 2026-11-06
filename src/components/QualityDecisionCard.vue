@@ -12,11 +12,24 @@
         </svg>
         <span class="card-title">Keputusan Mutu (SVM Engine)</span>
       </div>
-      <span class="realtime-badge">REAL-TIME</span>
+      <button class="btn-popup-head" @click="$emit('open-detail')" title="Buka Pop-up Detail">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          <line x1="11" y1="8" x2="11" y2="14" />
+          <line x1="8" y1="11" x2="14" y2="11" />
+        </svg>
+        <span>Detail Pop-up</span>
+      </button>
     </div>
 
-    <!-- Grade Hero Card -->
-    <div class="hero-decision-box" :class="currentEgg.grade.toLowerCase().replace(' ', '-')">
+    <!-- Grade Hero Card (Clickable to open pop-up) -->
+    <div
+      class="hero-decision-box"
+      :class="currentEgg.grade.toLowerCase().replace(' ', '-')"
+      @click="$emit('open-detail')"
+      title="Klik untuk membuka pop-up detail"
+    >
       <div class="decision-left">
         <div class="classification-meta">KLASIFIKASI TELUR TERPINDAI</div>
         <div class="grade-big-name">{{ currentEgg.grade }}</div>
@@ -94,6 +107,8 @@ defineProps({
     required: true
   }
 })
+
+defineEmits(['open-detail'])
 </script>
 
 <style scoped>
@@ -131,6 +146,32 @@ defineProps({
   font-size: 0.92rem;
   font-weight: 700;
   color: var(--text-title);
+}
+
+.btn-popup-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background-color: var(--teal-light);
+  border: 1px solid var(--teal-border);
+  color: var(--teal-primary);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-popup-head svg {
+  width: 13px;
+  height: 13px;
+}
+
+.btn-popup-head:hover {
+  background-color: var(--teal-primary);
+  color: #ffffff;
+  transform: translateY(-1px);
 }
 
 .realtime-badge {

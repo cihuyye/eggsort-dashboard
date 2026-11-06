@@ -57,6 +57,7 @@
             <th>DETEKSI CACAT (YOLO)</th>
             <th>KEPUTUSAN AKHIR</th>
             <th>AKSI AKTUATOR</th>
+            <th>DETAIL</th>
           </tr>
         </thead>
         <tbody>
@@ -120,6 +121,21 @@
             <td class="col-actuator">
               <span class="actuator-table-text">{{ log.actuator }}</span>
             </td>
+
+            <!-- Detail Pop-up Button -->
+            <td class="col-detail-action">
+              <button
+                class="btn-row-inspect"
+                @click="$emit('open-detail', log)"
+                title="Buka Pop-up Detail Inspeksi"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                <span>Lihat</span>
+              </button>
+            </td>
           </tr>
 
           <!-- Empty State if no logs -->
@@ -171,7 +187,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['update:filterGrade'])
+const emit = defineEmits(['update:filterGrade', 'open-detail'])
 
 const filterGrade = computed({
   get: () => props.filterGrade,
@@ -433,6 +449,33 @@ const displayLogs = computed(() => {
 .actuator-table-text {
   font-size: 0.74rem;
   color: var(--text-muted);
+}
+
+.btn-row-inspect {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background-color: var(--bg-card-subtle);
+  border: 1px solid var(--border-card);
+  color: var(--teal-primary);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-row-inspect svg {
+  width: 13px;
+  height: 13px;
+}
+
+.btn-row-inspect:hover {
+  background-color: var(--teal-primary);
+  color: #ffffff;
+  border-color: var(--teal-primary);
+  transform: translateY(-1px);
 }
 
 .empty-state {

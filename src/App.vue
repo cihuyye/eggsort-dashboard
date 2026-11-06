@@ -59,12 +59,13 @@
                 :isSnapshotting="isSnapshotting"
                 :currentEgg="currentEgg"
                 :triggerToast="triggerToast"
+                @open-detail="openEggDetail(currentEgg)"
               />
             </div>
 
             <!-- Right Column: Keputusan Mutu & Parameter Metrik -->
             <div class="middle-col-right">
-              <QualityDecisionCard :currentEgg="currentEgg" />
+              <QualityDecisionCard :currentEgg="currentEgg" @open-detail="openEggDetail(currentEgg)" />
               <GeometryMetricsCard :currentEgg="currentEgg" />
             </div>
           </div>
@@ -78,6 +79,7 @@
               :totalScanned="totalScanned"
               :mqttFreq="mqttFreq"
               :exportCSV="exportCSV"
+              @open-detail="openEggDetail($event)"
             />
           </div>
         </div>
@@ -116,10 +118,19 @@
 
     <!-- Toast Notification Overlay -->
     <ToastNotification :show="showToast" :message="toastMessage" />
+
+    <!-- Interactive Egg Inspection Detail Pop-up Modal -->
+    <EggDetailModal
+      :show="showDetailModal"
+      :eggData="selectedEgg || currentEgg"
+      :triggerToast="triggerToast"
+      @close="showDetailModal = false"
+    />
   </div>
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { useEggSort } from './composables/useEggSort'
 import Sidebar from './components/Sidebar.vue'
 import TopNav from './components/TopNav.vue'
@@ -133,6 +144,19 @@ import ExtraTabsView from './components/ExtraTabsView.vue'
 import HistoryAnalyticsView from './components/HistoryAnalyticsView.vue'
 import ProfileView from './components/ProfileView.vue'
 import ToastNotification from './components/ToastNotification.vue'
+import EggDetailModal from './components/EggDetailModal.vue'
+
+const showDetailModal = ref(false)
+const selectedEgg = ref(null)
+
+const openEggDetail = (egg) => {
+  if (egg) {
+    selectedEgg.value = egg
+  } else {
+    selectedEgg.value = currentEgg.value
+  }
+  showDetailModal.value = true
+}
 
 const {
   theme,

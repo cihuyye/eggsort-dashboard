@@ -29,7 +29,7 @@
       </div>
 
       <!-- Egg Target Visualizer -->
-      <div class="egg-stage" :class="streamMode">
+      <div class="egg-stage" :class="streamMode" @click="$emit('open-detail')" title="Klik untuk membuka pop-up detail inspeksi" style="cursor: pointer;">
         <!-- Candling Light Beam (Visible in candling mode) -->
         <div v-if="streamMode === 'candling'" class="candling-beam"></div>
 
@@ -122,6 +122,16 @@
           <span>Stream: {{ streamMode === 'top' ? 'Top-Light (Cangkang)' : 'Candling (Interior)' }}</span>
         </button>
 
+        <button class="cam-btn cam-btn-inspect" @click="$emit('open-detail')" title="Buka Pop-up Detail Telur Terdeteksi">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            <line x1="11" y1="8" x2="11" y2="14" />
+            <line x1="8" y1="11" x2="14" y2="11" />
+          </svg>
+          <span>Detail Telur</span>
+        </button>
+
         <button class="cam-btn" @click="triggerToast('Kalibrasi titik fokus lensa selesai (F/2.2 - locked)')" title="Kalibrasi auto-fokus dan exposure">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
@@ -138,6 +148,7 @@
 </template>
 
 <script setup>
+defineEmits(['open-detail'])
 defineProps({
   fps: { type: [Number, String], default: 29.8 },
   latency: { type: [Number, String], default: 14 },
