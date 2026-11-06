@@ -3,7 +3,7 @@
     <!-- Left Creative Sidebar -->
     <Sidebar
       :activeTab="activeTab"
-      @update:activeTab="activeTab = $event"
+      @update:activeTab="handleTabChange"
       :operatorProfile="operatorProfile"
     />
 
@@ -11,13 +11,9 @@
     <div class="main-panel">
       <!-- Top Navigation Bar -->
       <TopNav
-        :theme="theme"
-        :toggleTheme="toggleTheme"
+        :apiOnline="apiOnline"
         :fps="fps"
         :isAutoMode="isAutoMode"
-        :activeTab="activeTab"
-        :operatorProfile="operatorProfile"
-        @select-profile="activeTab = 'profile'"
       />
 
       <!-- Content Container -->
@@ -44,31 +40,13 @@
             :rejectCapacity="rejectCapacity"
           />
 
-          <!-- Middle Section: 2 Columns (Camera Stream on Left, AI Decision & Geometry on Right) -->
-          <div class="middle-grid">
-            <!-- Left Column: Camera Feed -->
-            <div class="middle-col-left">
-              <CameraStream
-                :fps="fps"
-                :latency="latency"
-                :inferenceTime="inferenceTime"
-                :isLedOn="isLedOn"
-                :streamMode="streamMode"
-                :toggleStreamMode="toggleStreamMode"
-                :takeSnapshot="takeSnapshot"
-                :isSnapshotting="isSnapshotting"
-                :currentEgg="currentEgg"
-                :triggerToast="triggerToast"
-                @open-detail="openEggDetail(currentEgg)"
-              />
-            </div>
-
-            <!-- Right Column: Keputusan Mutu & Parameter Metrik -->
-            <div class="middle-col-right">
-              <QualityDecisionCard :currentEgg="currentEgg" @open-detail="openEggDetail(currentEgg)" />
-              <GeometryMetricsCard :currentEgg="currentEgg" />
-            </div>
-          </div>
+          <!-- Grafik Total Telur yang Dipindai (Filter Waktu & Grade Mutu) -->
+          <EggScanVolumeChart
+            :totalScanned="totalScanned"
+            :gradeACount="gradeACount"
+            :gradeBCount="gradeBCount"
+            :rejectCount="rejectCount"
+          />
 
           <!-- Bottom Section: Log Pemindaian Terkini (Live Feed Queue Table) -->
           <div class="bottom-section">
@@ -84,7 +62,33 @@
           </div>
         </div>
 
-        <!-- View 2: Dedicated Profile & Account Security Page (Shown when activeTab === 'profile') -->
+        <!-- View: Live Camera & Inspeksi Real-time (Shown when activeTab === 'camera') -->
+        <div v-else-if="activeTab === 'camera'" class="camera-page-body">
+          <CameraStream
+            :fps="fps"
+            :latency="latency"
+            :inferenceTime="inferenceTime"
+            :isLedOn="isLedOn"
+            :streamMode="streamMode"
+            :toggleStreamMode="toggleStreamMode"
+            :takeSnapshot="takeSnapshot"
+            :isSnapshotting="isSnapshotting"
+            :currentEgg="currentEgg"
+            :triggerToast="triggerToast"
+            :apiOnline="apiOnline"
+            :apiLoading="apiLoading"
+            :scanRealEgg="scanRealEgg"
+            @open-detail="openEggDetail(currentEgg)"
+          />
+
+          <!-- Side-by-Side: Quality Decision & Geometry under camera -->
+          <div class="camera-inspect-grid">
+            <QualityDecisionCard :currentEgg="currentEgg" @open-detail="openEggDetail(currentEgg)" />
+            <GeometryMetricsCard :currentEgg="currentEgg" />
+          </div>
+        </div>
+
+        <!-- View 3: Dedicated Profile & Account Security Page (Shown when activeTab === 'profile') -->
         <div v-else-if="activeTab === 'profile'">
           <ProfileView
             :operatorProfile="operatorProfile"
@@ -126,16 +130,24 @@
       :triggerToast="triggerToast"
       @close="showDetailModal = false"
     />
+
+    <!-- Real-time Egg Quality Decision Pop-up (Hanya muncul di halaman Dashboard) -->
+    <EggDecisionPopup
+      v-if="activeTab === 'dashboard'"
+      :currentEgg="currentEgg"
+      @open-detail="openEggDetail"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { useEggSort } from './composables/useEggSort'
 import Sidebar from './components/Sidebar.vue'
 import TopNav from './components/TopNav.vue'
 import SubHeader from './components/SubHeader.vue'
 import KpiCards from './components/KpiCards.vue'
+import EggScanVolumeChart from './components/EggScanVolumeChart.vue'
 import CameraStream from './components/CameraStream.vue'
 import QualityDecisionCard from './components/QualityDecisionCard.vue'
 import GeometryMetricsCard from './components/GeometryMetricsCard.vue'
@@ -145,9 +157,33 @@ import HistoryAnalyticsView from './components/HistoryAnalyticsView.vue'
 import ProfileView from './components/ProfileView.vue'
 import ToastNotification from './components/ToastNotification.vue'
 import EggDetailModal from './components/EggDetailModal.vue'
+import EggDecisionPopup from './components/EggDecisionPopup.vue'
 
 const showDetailModal = ref(false)
 const selectedEgg = ref(null)
+
+// Fungsi untuk me-reset scroll seluruh window & container ke posisi paling atas
+const scrollToTop = () => {
+  window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  if (document.documentElement) document.documentElement.scrollTop = 0
+  if (document.body) document.body.scrollTop = 0
+
+  const mainPanel = document.querySelector('.main-panel')
+  if (mainPanel) mainPanel.scrollTop = 0
+  const contentContainer = document.querySelector('.content-container')
+  if (contentContainer) contentContainer.scrollTop = 0
+}
+
+const handleTabChange = (newTab) => {
+  activeTab.value = newTab
+  scrollToTop()
+  nextTick(() => {
+    scrollToTop()
+    requestAnimationFrame(() => {
+      scrollToTop()
+    })
+  })
+}
 
 const openEggDetail = (egg) => {
   if (egg) {
@@ -193,8 +229,23 @@ const {
   scanLogs,
   resetSession,
   takeSnapshot,
-  exportCSV
+  exportCSV,
+  apiOnline,
+  apiLoading,
+  apiDevice,
+  scanRealEgg
 } = useEggSort()
+
+// Pantau setiap perubahan tab untuk memastikan tampilan selalu kembali ke paling atas
+watch(activeTab, () => {
+  scrollToTop()
+  nextTick(() => {
+    scrollToTop()
+    requestAnimationFrame(() => {
+      scrollToTop()
+    })
+  })
+})
 </script>
 
 <style scoped>
@@ -258,6 +309,24 @@ const {
 @media (max-width: 768px) {
   .content-container {
     padding: 16px;
+  }
+}
+
+.camera-page-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.camera-inspect-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 1024px) {
+  .camera-inspect-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

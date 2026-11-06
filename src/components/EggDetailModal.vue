@@ -28,8 +28,13 @@
             <div class="visual-viewport" :class="inspectMode">
               <div class="viewport-rollers"></div>
 
-              <!-- Egg Graphic -->
-              <div class="egg-graphic" :class="[inspectMode, gradeClass]">
+              <!-- Real Photo Preview (jika ada gambar dari API) -->
+              <div v-if="eggData.imageUrl" class="real-egg-modal-wrap">
+                <img :src="eggData.imageUrl" class="real-egg-modal-img" alt="Foto Telur Detail" />
+              </div>
+
+              <!-- Egg Graphic (Simulasi Bawaan) -->
+              <div v-else class="egg-graphic" :class="[inspectMode, gradeClass]">
                 <div v-if="inspectMode === 'candling'" class="candling-glow-effect"></div>
                 <div v-if="inspectMode === 'candling'" class="air-chamber">
                   <span>{{ eggData.airDepthCm || 0.32 }}cm</span>
@@ -104,7 +109,7 @@
               <div class="score-info">
                 <div class="score-title">AI Confidence Score</div>
                 <div class="score-status" :class="gradeClass">{{ eggData.gradeLabel || 'Prima' }}</div>
-                <div class="svm-val font-mono">SVM: {{ eggData.svmProbability || 0.984 }}</div>
+                <div class="yolo-val font-mono">YOLOv8: {{ eggData.yoloProbability || 0.984 }}</div>
               </div>
             </div>
 
@@ -163,30 +168,23 @@
                     {{ eggData.grade === 'REJECT' ? 'Terdeteksi Cacat' : 'Utuh & Bersih' }}
                   </span>
                   <span class="status-badge badge-neutral font-mono">
-                    HU: {{ eggData.internalHaugh || '82' }}
+                    {{ formattedHaugh }}
                   </span>
                 </div>
               </div>
             </div>
 
-            <!-- Quick Modal Action Buttons -->
-            <div class="modal-action-btns">
-              <button class="btn-primary-action" @click="handlePrintLabel">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="6 9 6 2 18 2 18 9" />
-                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                  <rect x="6" y="14" width="12" height="8" />
-                </svg>
-                <span>Cetak Barcode</span>
-              </button>
-
-              <button class="btn-secondary-action" @click="handleRerunAi">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M23 4v6h-6" />
-                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                </svg>
-                <span>Uji Ulang AI</span>
-              </button>
+            <!-- Rekomendasi Tindakan Selanjutnya Berdasarkan SNI 3926:2023 -->
+            <div class="sni-action-card" :class="gradeClass">
+              <div class="sni-action-card-header">
+                <span class="sni-badge">STANDAR SNI 3926:2023</span>
+                <span class="sni-title-tag">TINDAKAN SELANJUTNYA &amp; PENANGANAN</span>
+              </div>
+              <p class="sni-action-narrative">{{ eggData.sniAction || defaultDetailSniAction }}</p>
+              <div class="sni-meta-pills">
+                <span class="sni-meta-pill">📋 Acuan: {{ eggData.standardRef || 'SNI 3926:2023 (Tabel 1 & Pasal 8-10)' }}</span>
+                <span class="sni-meta-pill">🎯 Jalur: {{ eggData.actuator || 'Gate 1 (Solenoid)' }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -215,38 +213,50 @@ const gradeClass = computed(() => {
   return 'grade-a'
 })
 
-const handlePrintLabel = () => {
-  props.triggerToast(`Label Barcode untuk ${props.eggData?.eggId || '#EGG-1428'} dikirim ke printer thermal.`)
-}
+const defaultDetailSniAction = computed(() => {
+  const g = (props.eggData?.grade || 'Grade A').toUpperCase()
+  if (g.includes('A') || g.includes('MUTU I')) {
+    return 'Layak konsumsi langsung segar. Dikemas dalam kemasan ritel berlabel resmi minimal mencantumkan nama produk, tanggal produksi, NKV, jumlah butir, dan tingkatan mutu (Pasal 8 & 9 SNI 3926:2023). Simpan pada suhu ruang maks 30°C / kelembaban maks 90% (Pasal 10).'
+  }
+  if (g.includes('B') || g.includes('MUTU II')) {
+    return 'Lolos konsumsi reguler & bahan baku industri olahan pangan (bakery/kue/mie). Sanitasi kering noda kerabang (toleransi noda ≤ 1/32 luas permukaan Tabel 1 SNI 3926:2023) tanpa perendaman air berlebih. Prioritaskan distribusi cepat.'
+  }
+  return 'Ditolak dari peredaran telur ayam konsumsi segar utuh (Tabel 1 & 2 SNI 3926:2023) demi keamanan pangan dan pencegahan pencemaran mikroba patogen (Salmonella spp. & Enterobacteriaceae). Alihkan segera ke wadah karantina afkir/pemusnahan.'
+})
 
-const handleRerunAi = () => {
-  props.triggerToast(`Inferensi ulang YOLOv8 & OpenCV selesai (Conf: 99.1%).`)
-}
+const formattedHaugh = computed(() => {
+  const raw = String(props.eggData?.internalHaugh || '82').trim()
+  const cleanNum = raw.replace(/^[a-zA-Z\s\-:]+/, '').trim() || '82'
+  return `${cleanNum} HU`
+})
 </script>
 
 <style scoped>
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(5, 10, 20, 0.75);
-  backdrop-filter: blur(6px);
+  background-color: rgba(5, 10, 20, 0.78);
+  backdrop-filter: blur(8px);
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 16px;
+  overflow-y: auto;
 }
 
 .modal-window {
   background-color: var(--bg-card);
   border: 1px solid var(--border-card);
-  border-radius: 16px;
+  border-radius: 14px;
   width: 100%;
-  max-width: 780px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  max-width: 820px;
+  max-height: calc(100vh - 32px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  margin: auto;
   transition: all 0.25s ease;
 }
 
@@ -255,9 +265,10 @@ const handleRerunAi = () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 22px;
+  padding: 12px 18px;
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-card-subtle);
+  flex-shrink: 0;
 }
 
 .modal-id-row {
@@ -276,7 +287,7 @@ const handleRerunAi = () => {
 }
 
 .egg-title-code {
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 800;
   color: var(--text-title);
 }
@@ -319,9 +330,9 @@ const handleRerunAi = () => {
 .modal-close-icon-btn {
   background: transparent;
   border: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -336,27 +347,29 @@ const handleRerunAi = () => {
 }
 
 .modal-close-icon-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
 }
 
 /* Modal Grid */
 .modal-grid {
   display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  gap: 20px;
-  padding: 22px;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 16px;
+  padding: 14px 18px 16px 18px;
+  overflow-y: auto;
+  max-height: calc(100vh - 90px);
 }
 
 /* Visual Panel */
 .visual-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .visual-viewport {
-  height: 280px;
+  height: 220px;
   background-color: #0b111e;
   border-radius: 12px;
   position: relative;
@@ -374,14 +387,31 @@ const handleRerunAi = () => {
   opacity: 0.4;
 }
 
+.real-egg-modal-wrap {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.real-egg-modal-img {
+  max-width: 120px;
+  max-height: 155px;
+  object-fit: contain;
+  border-radius: 50% 50% 45% 45% / 60% 60% 40% 40%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
 .egg-graphic {
-  width: 100px;
-  height: 140px;
+  width: 85px;
+  height: 120px;
   border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
   transform: rotate(-90deg);
   position: relative;
   z-index: 5;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
   transition: all 0.3s ease;
 }
 
@@ -548,9 +578,9 @@ const handleRerunAi = () => {
   justify-content: space-between;
   background: var(--bg-card-subtle);
   border: 1px solid var(--border-card);
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-radius: 8px;
-  font-size: 0.74rem;
+  font-size: 0.71rem;
 }
 
 .actuator-pill {
@@ -568,7 +598,7 @@ const handleRerunAi = () => {
 }
 
 .trig-time {
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   color: var(--text-muted);
 }
 
@@ -576,26 +606,27 @@ const handleRerunAi = () => {
 .metrics-panel {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
 
 .score-card {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   background: var(--bg-card-subtle);
   border: 1px solid var(--border-card);
-  padding: 14px 18px;
-  border-radius: 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
 }
 
 .score-circle-box {
-  width: 64px;
-  height: 64px;
+  width: 48px;
+  height: 48px;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .score-svg {
@@ -623,19 +654,19 @@ const handleRerunAi = () => {
 
 .score-num {
   position: absolute;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 800;
   color: var(--text-title);
 }
 
 .score-title {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   color: var(--text-muted);
   font-weight: 600;
 }
 
 .score-status {
-  font-size: 1.1rem;
+  font-size: 0.90rem;
   font-weight: 800;
   line-height: 1.2;
 }
@@ -644,27 +675,27 @@ const handleRerunAi = () => {
 .score-status.grade-b { color: var(--grade-b); }
 .score-status.grade-reject { color: var(--grade-c); }
 
-.svm-val {
-  font-size: 0.68rem;
+.yolo-val {
+  font-size: 0.65rem;
   color: var(--text-subtle);
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 /* Progress Meters */
 .progress-meters-card {
   background: var(--bg-card-subtle);
   border: 1px solid var(--border-card);
-  padding: 14px 16px;
-  border-radius: 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 7px;
 }
 
 .meter-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .meter-head {
@@ -751,64 +782,79 @@ const handleRerunAi = () => {
 }
 
 /* Modal Actions */
-.modal-action-btns {
-  display: flex;
-  gap: 10px;
-  margin-top: auto;
-}
-
-.btn-primary-action {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  background: linear-gradient(90deg, #00dfa2 0%, #059669 100%);
-  color: #042f2e;
-  border: none;
-  padding: 9px;
-  border-radius: 8px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-primary-action svg {
-  width: 15px;
-  height: 15px;
-}
-
-.btn-primary-action:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 223, 162, 0.4);
-}
-
-.btn-secondary-action {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  background: var(--bg-card-subtle);
+/* SNI 3926:2023 Action Recommendation Card */
+.sni-action-card {
+  background-color: var(--bg-card-subtle);
   border: 1px solid var(--border-card);
-  color: var(--text-body);
-  padding: 9px 14px;
-  border-radius: 8px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  border-radius: 10px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 2px;
 }
 
-.btn-secondary-action svg {
-  width: 14px;
-  height: 14px;
+.sni-action-card.grade-a {
+  border-left: 3px solid #10b981;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.02) 100%);
+}
+
+.sni-action-card.grade-b {
+  border-left: 3px solid #3b82f6;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.02) 100%);
+}
+
+.sni-action-card.grade-reject {
+  border-left: 3px solid #ef4444;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.02) 100%);
+}
+
+.sni-action-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sni-badge {
+  font-size: 0.60rem;
+  font-weight: 800;
+  background-color: rgba(20, 184, 166, 0.15);
+  color: var(--teal-primary);
+  border: 1px solid rgba(20, 184, 166, 0.3);
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+
+.sni-title-tag {
+  font-size: 0.62rem;
+  font-weight: 800;
   color: var(--text-muted);
+  letter-spacing: 0.04em;
 }
 
-.btn-secondary-action:hover {
-  background: var(--bg-card-hover);
-  border-color: var(--text-muted);
+.sni-action-narrative {
+  font-size: 0.69rem;
+  line-height: 1.35;
+  color: var(--text-main);
+  margin: 0;
+  font-weight: 500;
+}
+
+.sni-meta-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.sni-meta-pill {
+  font-size: 0.62rem;
+  font-weight: 600;
+  background-color: rgba(0, 0, 0, 0.06);
+  color: var(--text-muted);
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 /* Transition Animations */

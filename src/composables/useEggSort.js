@@ -1,4 +1,5 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { eggApiService } from '../services/eggApiService'
 
 export function useEggSort() {
   // Theme state: 'light' or 'dark'
@@ -33,12 +34,18 @@ export function useEggSort() {
   const toastMessage = ref('')
   const showToast = ref(false)
 
+  // API Backend States (Integrasi Flask API D:\Egg Sorting System\app_flask.py)
+  const apiOnline = ref(false)
+  const apiDevice = ref('cpu')
+  const apiLoading = ref(false)
+  const apiUrl = ref(eggApiService.getBaseUrl())
+
   const triggerToast = (msg) => {
     toastMessage.value = msg
     showToast.value = true
     setTimeout(() => {
       showToast.value = false
-    }, 3000)
+    }, 3500)
   }
 
   // Operator Profile State
@@ -88,10 +95,11 @@ export function useEggSort() {
   const currentEgg = ref({
     eggId: '#EGG-1428',
     grade: 'GRADE A',
-    gradeLabel: 'LAYAK KONSUMSI / PRIMA',
+    gradeLabel: 'MUTU I: KONSUMSI SEGAR / SUPER',
     confidence: 98.42,
-    svmProbability: 0.984,
-    actuator: 'Gate 1 (Solenoid Piston → Jalur Grade A)',
+    yoloProbability: 0.984,
+    actuator: 'Gate 1 (Solenoid Piston → Jalur Kemasan Ritel Mutu I)',
+    sniAction: 'Layak konsumsi langsung segar (Pasal 8 & 9 SNI). Kemas ke wadah ritel resmi berlabel. Simpan suhu ruang ≤ 30°C (Pasal 10).',
     triggerTime: '135ms',
     yoloDefectClass: 'Nihil',
     yoloDefectScore: 0.01,
@@ -103,23 +111,25 @@ export function useEggSort() {
     meanBrightness: 142.6,
     airDepthCm: 0.32,
     shellIntegrity: 'Bersih',
-    shellIntegritySub: 'Tanpa Kerusakan / Normal',
+    shellIntegritySub: 'Utuh, Halus, Tebal, Bebas Noda (SNI 3926:2023 Tabel 1)',
     internalHaugh: 'HU - 82',
-    internalHaughSub: 'Kualitas Segar AA / Transparan',
+    internalHaughSub: 'Kualitas Segar Mutu I / Kuning Telur di Tengah',
+    imageUrl: null,
+    detections: [],
     criteria: [
       {
-        title: 'Cangkang Utuh',
-        desc: 'Tidak terdeteksi retak atau noda darah (YOLOv8 Defect Score 0.01 < batas 0.25)',
+        title: 'Keutuhan & Kebersihan Kerabang',
+        desc: 'Cangkang utuh & bersih tanpa retak (YOLOv8 Score 0.01 < ambang 0.25 - SNI Tabel 1)',
         passed: true
       },
       {
-        title: 'Bentuk Proporsional',
+        title: 'Indeks Bentuk (SI 72% - 76%)',
         desc: 'Nilai Shape Index 74.05% berada tepat dalam standar mutu SNI (72% - 76%)',
         passed: true
       },
       {
-        title: 'Kantung Udara & Kuning Telur',
-        desc: 'Densitas cahaya candling stabil, Mean Brightness 142.6 (kantung udara < 0.5cm)',
+        title: 'Kantung Udara & Candling (< 0.5 cm)',
+        desc: 'Kedalaman kantung udara 0.32 cm tetap di tempat, bebas bercak darah / benda asing',
         passed: true
       }
     ]
@@ -224,7 +234,7 @@ export function useEggSort() {
 
   const takeSnapshot = () => {
     isSnapshotting.value = true
-    triggerToast(`Snapshot ${currentEgg.value.eggId} berhasil disimpan ke storage.`)
+    triggerToast(`Snapshot ${currentEgg.value.eggId} berhasil diambil & diproses.`)
     setTimeout(() => {
       isSnapshotting.value = false
     }, 400)
@@ -257,18 +267,174 @@ export function useEggSort() {
     triggerToast('File CSV berhasil diunduh.')
   }
 
-  // Simulation Engine
+  // Jeda simulasi sementara saat scan foto real aktif
+  let pauseSimulationTimer = null
+  const pauseSimulation = (ms = 25000) => {
+    if (pauseSimulationTimer) clearTimeout(pauseSimulationTimer)
+    pauseSimulationTimer = setTimeout(() => {
+      pauseSimulationTimer = null
+    }, ms)
+  }
+
+  // ============================================================================
+  // INTEGRASI API REALTIME (FASTAPI BACKEND YOLOv8 + OPENCV)
+  // ============================================================================
+  const checkApiHealth = async () => {
+    const res = await eggApiService.checkHealth()
+    apiOnline.value = res.online
+    if (res.online && res.data) {
+      apiDevice.value = res.data.device || 'cpu'
+    }
+  }
+
+  // Fungsi utama untuk memproses citra telur dari kamera atau upload
+  const scanRealEgg = async (files, previewUrl = null) => {
+    apiLoading.value = true
+    pauseSimulation(30000) // Tahan simulasi agar hasil citra real tidak langsung tertimpa
+
+    try {
+      const res = await eggApiService.predictEgg(files)
+      const summary = res.summary_360 || {}
+      const geo = res.opencv_geometry_inspection || {}
+      const decision = res.final_grading_decision || {}
+      const angles = res.angles || []
+
+      // Mapping grade SNI ke label UI dashboard
+      let mappedGrade = 'GRADE A'
+      let mappedLabel = 'LAYAK KONSUMSI / PRIMA'
+      const code = decision.grade_code || 'MUTU_I'
+
+      if (code === 'MUTU_I') {
+        mappedGrade = 'GRADE A'
+        mappedLabel = 'MUTU I / PRIMA (SNI 3926:2023)'
+        gradeACount.value += 1
+      } else if (code === 'MUTU_II') {
+        mappedGrade = 'GRADE B'
+        mappedLabel = 'MUTU II / KOMERSIAL'
+        gradeBCount.value += 1
+      } else {
+        mappedGrade = 'REJECT'
+        mappedLabel = 'MUTU III / REJECT'
+        rejectCount.value += 1
+        rejectCapacity.value = Math.min(100, rejectCapacity.value + 1)
+      }
+
+      totalScanned.value += 1
+
+      const now = new Date()
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
+      const eggIdStr = `#EGG-${totalScanned.value}`
+
+      const dominantDefect = summary.dominant_defect || 'good'
+      const confScore = +(summary.confidence ? summary.confidence * 100 : 98.0).toFixed(1)
+
+      // Ambil bounding boxes jika ada
+      const detections = angles.length > 0 ? (angles[0].detections || []) : []
+
+      // Update currentEgg state
+      currentEgg.value = {
+        eggId: eggIdStr,
+        grade: mappedGrade,
+        gradeLabel: mappedGrade === 'GRADE A'
+          ? 'MUTU I: KONSUMSI SEGAR / SUPER'
+          : (mappedGrade === 'GRADE B'
+            ? 'MUTU II: KONSUMSI REGULER / INDUSTRI OLAHAN'
+            : 'TIDAK MEMENUHI SYARAT: CACAT KERABANG / RETAK'),
+        confidence: confScore,
+        yoloProbability: summary.confidence || 0.98,
+        actuator: decision.hardware_sorting_action || (
+          mappedGrade === 'GRADE A'
+            ? 'Gate 1 (Solenoid Piston → Jalur Kemasan Ritel Mutu I)'
+            : (mappedGrade === 'GRADE B'
+              ? 'Gate 2 (Solenoid Piston → Jalur Industri Pangan Mutu II)'
+              : 'Reject Ejector (Pneumatik → Penampung Karantina Afkir)')
+        ),
+        sniAction: mappedGrade === 'GRADE A'
+          ? 'Layak konsumsi langsung segar (Pasal 8 & 9 SNI). Kemas ke wadah ritel resmi berlabel, simpan pada suhu ruang ≤ 30°C (Pasal 10).'
+          : (mappedGrade === 'GRADE B'
+            ? 'Lolos konsumsi reguler & bahan baku industri pangan (bakery/mie). Sanitasi kering noda kerabang ≤ 1/32 (Tabel 1 SNI). Prioritaskan perputaran cepat.'
+            : 'Dilarang diedarkan sebagai telur segar utuh (Tabel 1 & 2 SNI). Cacat kerabang tidak utuh rawan cemaran patogen Salmonella spp. Alihkan ke karantina afkir.'),
+        triggerTime: `${res.clientLatencyMs || 15}ms`,
+        yoloDefectClass: dominantDefect,
+        yoloDefectScore: summary.confidence || 0.01,
+        length: geo.length_mm || 56.5,
+        lengthPx: Math.round((geo.length_mm || 56.5) * 7.1),
+        width: geo.width_mm || 43.2,
+        widthPx: Math.round((geo.width_mm || 43.2) * 7.1),
+        shapeIndex: geo.esi_percentage || 76.5,
+        meanBrightness: 142.0,
+        airDepthCm: 0.35,
+        shellIntegrity: dominantDefect === 'good' ? 'Bersih & Utuh' : (dominantDefect === 'dirt' ? 'Noda Cangkang' : 'Retak Cangkang'),
+        shellIntegritySub: summary.notes || decision.reason || 'Kondisi kerabang normal',
+        internalHaugh: mappedGrade === 'GRADE A' ? 'HU - 84' : (mappedGrade === 'GRADE B' ? 'HU - 72' : 'HU - 52'),
+        internalHaughSub: mappedGrade === 'GRADE A' ? 'Kualitas Segar AA' : (mappedGrade === 'GRADE B' ? 'Kualitas Mutu II' : 'Tidak Layak Konsumsi'),
+        imageUrl: previewUrl || (files instanceof File ? URL.createObjectURL(files) : null),
+        detections: detections,
+        criteria: [
+          {
+            title: 'Keutuhan Cangkang (YOLOv8)',
+            desc: summary.notes || `Deteksi: ${dominantDefect.toUpperCase()} (${confScore}%)`,
+            passed: dominantDefect === 'good'
+          },
+          {
+            title: 'Geometri Bentuk (OpenCV)',
+            desc: `Dimensi ${geo.length_mm} × ${geo.width_mm} mm (SI: ${geo.esi_percentage}% - ${geo.shape_status || 'Normal'})`,
+            passed: (geo.esi_percentage >= 72 && geo.esi_percentage <= 80)
+          },
+          {
+            title: 'Keputusan Mutu SNI 3926:2023',
+            desc: decision.reason || 'Evaluasi standar SNI terpenuhi.',
+            passed: (code !== 'MUTU_III')
+          }
+        ]
+      }
+
+      // Masukkan ke tabel scan log
+      scanLogs.value.unshift({
+        time: timeStr,
+        eggId: eggIdStr,
+        dimensions: `${geo.length_mm || 56.5} × ${geo.width_mm || 43.2} mm`,
+        shapeIndex: `${geo.esi_percentage || 76.5}%`,
+        meanBrightness: '142.0',
+        defectDetection: dominantDefect === 'good' ? '✔ Utuh (0.01)' : (dominantDefect === 'dirt' ? `⊘ Kotor (${confScore}%)` : `⚠ Retak (${confScore}%)`),
+        defectType: dominantDefect,
+        finalGrade: mappedGrade,
+        actuator: decision.hardware_sorting_action || mappedGrade
+      })
+
+      if (scanLogs.value.length > 25) {
+        scanLogs.value.pop()
+      }
+
+      // Update telemetry
+      latency.value = res.clientLatencyMs || 14
+      inferenceTime.value = +(res.clientLatencyMs * 0.75).toFixed(1) || 12.0
+
+      triggerToast(`[API AI] Hasil: ${mappedGrade} (${dominantDefect}) - ${decision.hardware_sorting_action || 'Sortir Selesai'}`)
+      return res
+    } catch (err) {
+      console.error('[EggApi Error]:', err)
+      triggerToast(`Gagal menghubungi API: ${err.message || 'Cek terminal app_api.py'}`)
+      throw err
+    } finally {
+      apiLoading.value = false
+    }
+  }
+
+  // Simulation Engine (Berjalan saat tidak ada interaksi foto real)
   let simInterval = null
   let fpsInterval = null
+  let healthInterval = null
 
   const sampleVariations = [
     {
       grade: 'GRADE A',
-      gradeLabel: 'LAYAK KONSUMSI / PRIMA',
+      gradeLabel: 'MUTU I: KONSUMSI SEGAR / SUPER',
       conf: 98.7,
-      svm: 0.987,
-      actuator: 'Gate 1 (Solenoid Piston → Jalur Grade A)',
-      actuatorTable: 'Gate 1 → Bin A',
+      yolo: 0.987,
+      actuator: 'Gate 1 (Solenoid Piston → Jalur Kemasan Ritel Mutu I)',
+      actuatorTable: 'Gate 1 → Ritel Mutu I',
+      sniAction: 'Layak konsumsi langsung segar (Pasal 8 & 9 SNI). Kemas ke wadah ritel resmi berlabel, simpan suhu ruang ≤ 30°C / kelembaban ≤ 90% (Pasal 10).',
       defectDetection: '✔ Nihil (0.01)',
       defectType: 'good',
       lengthRange: [57.0, 59.5],
@@ -277,17 +443,18 @@ export function useEggSort() {
       airDepth: 0.3,
       haugh: 'HU - 84',
       passed: [true, true, true],
-      c1: 'Tidak terdeteksi retak atau noda darah (YOLOv8 Defect Score 0.01 < batas 0.25)',
-      c2: 'Nilai Shape Index dalam standar mutu SNI (72% - 76%)',
-      c3: 'Densitas cahaya candling stabil, kantung udara < 0.5cm'
+      c1: 'Cangkang utuh, bersih, bebas noda & retakan (SNI 3926:2023 Tabel 1)',
+      c2: 'Nilai Shape Index normal dalam rentang SNI (72% - 76%)',
+      c3: 'Kantung udara < 0.5 cm (sangat segar), kuning telur bulat di tengah'
     },
     {
       grade: 'GRADE A',
-      gradeLabel: 'LAYAK KONSUMSI / PRIMA',
+      gradeLabel: 'MUTU I: KONSUMSI SEGAR / SUPER',
       conf: 97.9,
-      svm: 0.979,
-      actuator: 'Gate 1 (Solenoid Piston → Jalur Grade A)',
-      actuatorTable: 'Gate 1 → Bin A',
+      yolo: 0.979,
+      actuator: 'Gate 1 (Solenoid Piston → Jalur Kemasan Ritel Mutu I)',
+      actuatorTable: 'Gate 1 → Ritel Mutu I',
+      sniAction: 'Layak konsumsi langsung segar (Pasal 8 & 9 SNI). Kemas ke wadah ritel resmi berlabel, simpan suhu ruang ≤ 30°C / kelembaban ≤ 90% (Pasal 10).',
       defectDetection: '✔ Nihil (0.02)',
       defectType: 'good',
       lengthRange: [56.8, 58.8],
@@ -296,17 +463,18 @@ export function useEggSort() {
       airDepth: 0.35,
       haugh: 'HU - 81',
       passed: [true, true, true],
-      c1: 'Cangkang bersih dan utuh sempurna tanpa celah mikro',
-      c2: 'Proporsi lebar terhadap panjang elips ideal sesuai SNI',
-      c3: 'Transparansi cairan jernih, kantung udara normal < 0.5cm'
+      c1: 'Cangkang utuh, halus, tebal, bebas noda asing (SNI 3926:2023 Tabel 1)',
+      c2: 'Proporsi lebar terhadap panjang elips ideal sesuai SNI (72% - 76%)',
+      c3: 'Kantung udara 0.35 cm tetap di tempat, bebas bercak darah'
     },
     {
       grade: 'GRADE B',
-      gradeLabel: 'TOLERANSI NORMAL / INDUSTRI',
+      gradeLabel: 'MUTU II: KONSUMSI REGULER / INDUSTRI OLAHAN',
       conf: 94.2,
-      svm: 0.942,
-      actuator: 'Gate 2 (Solenoid Piston → Jalur Grade B)',
-      actuatorTable: 'Gate 2 → Bin B',
+      yolo: 0.942,
+      actuator: 'Gate 2 (Solenoid Piston → Jalur Industri Pangan Mutu II)',
+      actuatorTable: 'Gate 2 → Industri Mutu II',
+      sniAction: 'Lolos konsumsi reguler & bahan baku industri pangan/bakery. Sanitasi kering noda kerabang ≤ 1/32 (Tabel 1 SNI). Prioritaskan distribusi cepat.',
       defectDetection: '⊘ Noda Cangkang Ringan (0.28)',
       defectType: 'dirt',
       lengthRange: [59.0, 62.5],
@@ -315,17 +483,18 @@ export function useEggSort() {
       airDepth: 0.65,
       haugh: 'HU - 71',
       passed: [false, true, true],
-      c1: 'Terdapat noda ringan pada permukaan kerabang (YOLOv8 Score 0.28)',
-      c2: 'Bentuk proporsional sesuai rentang toleransi komersial',
-      c3: 'Kantung udara 0.5 - 0.9cm (masuk kategori Mutu II SNI)'
+      c1: 'Terdapat noda ringan cangkang (toleransi ≤ 1/32 permukaan kerabang SNI Tabel 1)',
+      c2: 'Bentuk cangkang normal / toleransi komersial',
+      c3: 'Kantung udara 0.5 - 0.9 cm (memenuhi syarat Mutu II SNI 3926:2023)'
     },
     {
       grade: 'REJECT',
-      gradeLabel: 'CACAT FISIK / TIDAK LAYAK',
+      gradeLabel: 'TIDAK MEMENUHI SYARAT: CACAT KERABANG / RETAK',
       conf: 99.1,
-      svm: 0.991,
-      actuator: 'Reject Ejector → Penampung Cacat',
-      actuatorTable: 'Reject Ejector → Akhir',
+      yolo: 0.991,
+      actuator: 'Reject Ejector (Pneumatik → Penampung Karantina Afkir)',
+      actuatorTable: 'Reject Ejector → Karantina',
+      sniAction: 'Dilarang diedarkan sebagai telur segar utuh (Tabel 1 & 2 SNI). Cacat kerabang retak rawan cemaran patogen Salmonella spp. Alihkan ke karantina afkir.',
       defectDetection: '⚠ Retakan Rambut (0.91)',
       defectType: 'cracked',
       lengthRange: [53.5, 56.0],
@@ -334,14 +503,14 @@ export function useEggSort() {
       airDepth: 1.05,
       haugh: 'HU - 54',
       passed: [false, false, false],
-      c1: 'Terdeteksi retak rambut (cracked) kritis pada dinding cangkang',
-      c2: 'Bentuk abnormal atau kantung udara melebihi ambang batas (> 0.9cm)',
-      c3: 'Kekeruhan candling tinggi / indikasi penurunan mutu berat'
+      c1: 'Cangkang retak / tidak utuh (melanggar syarat keutuhan seluruh mutu SNI Tabel 1)',
+      c2: 'Kantung udara > 0.9 cm / melebihi batas kesegaran konsumsi',
+      c3: 'Kekeruhan candling tinggi / risiko kontaminasi mikroba patogen'
     }
   ]
 
   const spawnEgg = () => {
-    if (!isAutoMode.value || isEmergencyStop.value) return
+    if (!isAutoMode.value || isEmergencyStop.value || pauseSimulationTimer) return
 
     totalScanned.value += 1
     const rand = Math.random()
@@ -371,8 +540,9 @@ export function useEggSort() {
       grade: chosen.grade,
       gradeLabel: chosen.gradeLabel,
       confidence: chosen.conf,
-      svmProbability: chosen.svm,
+      yoloProbability: chosen.yolo,
       actuator: chosen.actuator,
+      sniAction: chosen.sniAction,
       triggerTime: `${Math.floor(125 + Math.random() * 25)}ms`,
       yoloDefectClass: chosen.defectType,
       yoloDefectScore: chosen.defectType === 'good' ? 0.01 : (chosen.defectType === 'dirt' ? 0.28 : 0.91),
@@ -387,6 +557,8 @@ export function useEggSort() {
       shellIntegritySub: chosen.grade === 'GRADE A' ? 'Tanpa Kerusakan / Normal' : (chosen.grade === 'GRADE B' ? 'Noda Ringan Cangkang' : 'Cacat Retak Kerabang'),
       internalHaugh: chosen.haugh,
       internalHaughSub: chosen.grade === 'GRADE A' ? 'Kualitas Segar AA / Transparan' : (chosen.grade === 'GRADE B' ? 'Kualitas Mutu II / Konsumsi' : 'Tidak Layak Konsumsi'),
+      imageUrl: null,
+      detections: [],
       criteria: [
         { title: 'Cangkang Utuh', desc: chosen.c1, passed: chosen.passed[0] },
         { title: 'Bentuk Proporsional', desc: `Shape Index ${si}% - ${chosen.c2}`, passed: chosen.passed[1] },
@@ -414,18 +586,26 @@ export function useEggSort() {
   onMounted(() => {
     applyTheme(theme.value)
 
+    // Polling status API backend (FastAPI / Flask D:\Egg Sorting System)
+    checkApiHealth()
+    healthInterval = setInterval(checkApiHealth, 4000)
+
     fpsInterval = setInterval(() => {
       fps.value = +(29.5 + Math.random() * 0.8).toFixed(1)
-      latency.value = Math.floor(13 + Math.random() * 3)
-      inferenceTime.value = +(13.8 + Math.random() * 1.4).toFixed(1)
+      if (!apiOnline.value) {
+        latency.value = Math.floor(13 + Math.random() * 3)
+        inferenceTime.value = +(13.8 + Math.random() * 1.4).toFixed(1)
+      }
     }, 2000)
 
-    simInterval = setInterval(spawnEgg, 3800)
+    simInterval = setInterval(spawnEgg, 4200)
   })
 
   onUnmounted(() => {
     if (simInterval) clearInterval(simInterval)
     if (fpsInterval) clearInterval(fpsInterval)
+    if (healthInterval) clearInterval(healthInterval)
+    if (pauseSimulationTimer) clearTimeout(pauseSimulationTimer)
   })
 
   return {
@@ -464,6 +644,13 @@ export function useEggSort() {
     filteredLogs,
     resetSession,
     takeSnapshot,
-    exportCSV
+    exportCSV,
+    // API State & Handlers
+    apiOnline,
+    apiDevice,
+    apiLoading,
+    apiUrl,
+    scanRealEgg,
+    checkApiHealth
   }
 }

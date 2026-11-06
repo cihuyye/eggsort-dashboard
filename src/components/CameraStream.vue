@@ -13,6 +13,9 @@
       <!-- Telemetry Tags -->
       <div class="telemetry-tags">
         <span class="tag-online">ONLINE (1080p @ {{ fps }} FPS)</span>
+        <span :class="apiOnline ? 'tag-api-online' : 'tag-api-offline'">
+          API: {{ apiOnline ? 'ONLINE (Port 8000)' : 'OFFLINE' }}
+        </span>
         <span class="tag-metric">Lat: {{ latency }}ms</span>
         <span class="tag-metric">LED: {{ isLedOn ? 'ON' : 'OFF' }}</span>
       </div>
@@ -33,8 +36,13 @@
         <!-- Candling Light Beam (Visible in candling mode) -->
         <div v-if="streamMode === 'candling'" class="candling-beam"></div>
 
-        <!-- Egg Silhouette & Texture -->
-        <div class="egg-model" :class="[streamMode, currentEgg.grade.toLowerCase().replace(' ', '-')]">
+        <!-- Real Image Preview (jika ada gambar dari API) -->
+        <div v-if="currentEgg.imageUrl" class="real-egg-wrapper">
+          <img :src="currentEgg.imageUrl" class="real-egg-img" alt="Citra Telur Terdeteksi" />
+        </div>
+
+        <!-- Egg Silhouette & Texture (Simulasi Bawaan) -->
+        <div v-else class="egg-model" :class="[streamMode, currentEgg.grade.toLowerCase().replace(' ', '-')]">
           <!-- Candling Interior Features -->
           <div v-if="streamMode === 'candling'" class="air-cell-visual" :style="{ height: `${Math.min(36, currentEgg.airDepthCm * 30)}px` }">
             <span class="air-cell-label">Kantung Udara: {{ currentEgg.airDepthCm }}cm</span>
@@ -88,7 +96,7 @@
           <span class="hud-sep">•</span>
           <span class="hud-tag">Inf: {{ inferenceTime }}ms</span>
           <span class="hud-sep">•</span>
-          <span class="hud-tag">Pipeline: OpenCV CLAHE - SVM</span>
+          <span class="hud-tag">Pipeline: OpenCV CLAHE → YOLOv8</span>
         </div>
         <div class="hud-right">
           <span class="hud-tag lock-tag">
@@ -101,6 +109,29 @@
     <!-- Camera Control Bar -->
     <div class="camera-controls">
       <div class="ctrl-buttons">
+        <!-- Tombol Unggah Citra Real untuk Uji API YOLOv8 & OpenCV -->
+        <button
+          class="cam-btn cam-btn-api"
+          :disabled="apiLoading"
+          @click="triggerFileInput"
+          title="Unggah foto telur asli untuk dianalisis langsung oleh model YOLOv8 & OpenCV"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+          <span>{{ apiLoading ? 'Memproses API...' : '⚡ Uji Citra Real (API)' }}</span>
+        </button>
+        <input
+          type="file"
+          ref="fileInputRef"
+          accept="image/*"
+          multiple
+          style="display: none;"
+          @change="onFileSelected"
+        />
+
         <button class="cam-btn" @click="takeSnapshot" title="Ambil cuplikan gambar saat ini">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
@@ -148,8 +179,10 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
+
 defineEmits(['open-detail'])
-defineProps({
+const props = defineProps({
   fps: { type: [Number, String], default: 29.8 },
   latency: { type: [Number, String], default: 14 },
   inferenceTime: { type: [Number, String], default: 14.2 },
@@ -159,8 +192,39 @@ defineProps({
   takeSnapshot: { type: Function, required: true },
   isSnapshotting: { type: Boolean, default: false },
   currentEgg: { type: Object, required: true },
-  triggerToast: { type: Function, required: true }
+  triggerToast: { type: Function, required: true },
+  apiOnline: { type: Boolean, default: false },
+  apiLoading: { type: Boolean, default: false },
+  scanRealEgg: { type: Function, default: null }
 })
+
+const fileInputRef = ref(null)
+
+const triggerFileInput = () => {
+  if (fileInputRef.value) {
+    fileInputRef.value.click()
+  }
+}
+
+const onFileSelected = async (event) => {
+  const files = event.target.files
+  if (!files || !files.length) return
+
+  if (props.scanRealEgg) {
+    props.triggerToast(`Mengirim ${files.length} citra ke server YOLOv8...`)
+    const previewUrl = URL.createObjectURL(files[0])
+    try {
+      await props.scanRealEgg(Array.from(files), previewUrl)
+    } catch (err) {
+      console.error(err)
+    }
+  } else {
+    props.triggerToast('Fungsi scan API belum terhubung.')
+  }
+
+  // Reset input agar bisa pilih file yang sama berulang kali
+  event.target.value = ''
+}
 </script>
 
 <style scoped>
@@ -225,6 +289,60 @@ defineProps({
   border: 1px solid var(--border-card);
   padding: 2px 8px;
   border-radius: 4px;
+}
+
+.tag-api-online {
+  color: #10b981;
+  background-color: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.tag-api-offline {
+  color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.real-egg-wrapper {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.real-egg-img {
+  max-width: 170px;
+  max-height: 230px;
+  object-fit: contain;
+  border-radius: 50% 50% 45% 45% / 60% 60% 40% 40%;
+  box-shadow: 0 0 35px rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.cam-btn-api {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.cam-btn-api:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669, #047857) !important;
+  transform: translateY(-1px);
+}
+
+.cam-btn-api svg {
+  color: #ffffff !important;
 }
 
 /* Viewport Area */

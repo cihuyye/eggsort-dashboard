@@ -46,8 +46,8 @@
         </div>
       </div>
       <div class="kpi-footer">
-        <span class="kpi-subtext">Solenoid Jalur 1</span>
-        <span class="status-tag tag-success">Optimal</span>
+        <span class="kpi-subtext">Solenoid 1 (Ritel Segar)</span>
+        <span class="status-tag tag-success">Mutu I SNI</span>
       </div>
     </div>
 
@@ -69,8 +69,8 @@
         </div>
       </div>
       <div class="kpi-footer">
-        <span class="kpi-subtext">Solenoid Jalur 2</span>
-        <span class="status-tag tag-blue">Toleransi Normal</span>
+        <span class="kpi-subtext">Solenoid 2 (Industri Pangan)</span>
+        <span class="status-tag tag-blue">Mutu II SNI</span>
       </div>
     </div>
 
@@ -93,7 +93,7 @@
         </div>
       </div>
       <div class="kpi-footer">
-        <span class="kpi-subtext">Wadah Penampung Akhir</span>
+        <span class="kpi-subtext">Pneumatik (Karantina Afkir)</span>
         <span class="status-tag tag-red">Kapasitas: {{ rejectCapacity }}%</span>
       </div>
     </div>
