@@ -203,10 +203,10 @@ defineEmits(['update:activeTab'])
 .logo-glow-ring {
   position: absolute;
   inset: -2px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.5) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.25) 0%, transparent 70%);
   border-radius: 9px;
-  filter: blur(3px);
-  animation: pulse-dot 2.5s infinite;
+  filter: blur(4px);
+  opacity: 0.6;
 }
 
 .logo-icon {
@@ -291,7 +291,7 @@ defineEmits(['update:activeTab'])
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 8px 10px 8px 12px;
   border-radius: 8px;
   background: transparent;
   border: 1px solid transparent;
@@ -300,9 +300,10 @@ defineEmits(['update:activeTab'])
   font-weight: 500;
   cursor: pointer;
   text-align: left;
-  transition: all 0.22s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   width: 100%;
   position: relative;
+  min-height: 36px;
 }
 
 .icon-wrap {
@@ -323,10 +324,12 @@ defineEmits(['update:activeTab'])
 
 .nav-text {
   flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   font-size: 0.73rem;
+  line-height: 1.3;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: none;
+  min-width: 0;
 }
 
 .nav-item:hover {
@@ -340,40 +343,53 @@ defineEmits(['update:activeTab'])
   opacity: 1;
 }
 
-/* Vibrant Active Pill */
+/* Subtle Active State with Accent Bar */
 .nav-item.active {
-  background: linear-gradient(90deg, #00dfa2 0%, #059669 100%);
-  color: #042f2e;
+  background: rgba(5, 150, 105, 0.12);
+  color: #10b981;
   font-weight: 700;
-  box-shadow: 0 3px 14px rgba(0, 223, 162, 0.3);
-  border-color: transparent;
+  border-color: rgba(5, 150, 105, 0.2);
+  position: relative;
+}
+
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+  border-radius: 0 2px 2px 0;
 }
 
 .nav-item.active .nav-icon {
   opacity: 1;
-  color: #042f2e;
+  color: #10b981;
 }
 
 .active-badge-dot {
   width: 5px;
   height: 5px;
-  background-color: #042f2e;
+  background-color: #10b981;
   border-radius: 50%;
 }
 
 .item-tag-sni {
   font-size: 0.52rem;
   font-weight: 700;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   color: #94a3b8;
-  padding: 1px 4px;
-  border-radius: 3px;
+  padding: 2px 5px;
+  border-radius: 4px;
   font-family: var(--font-mono);
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
 }
 
 .nav-item.active .item-tag-sni {
-  background: rgba(4, 47, 46, 0.18);
-  color: #042f2e;
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
 }
 
 .item-tag-live {
@@ -381,16 +397,17 @@ defineEmits(['update:activeTab'])
   font-weight: 800;
   background: rgba(239, 68, 68, 0.15);
   color: #ef4444;
-  padding: 1px 4px;
-  border-radius: 3px;
+  padding: 2px 5px;
+  border-radius: 4px;
   font-family: var(--font-mono);
   letter-spacing: 0.06em;
+  flex-shrink: 0;
   animation: livePulse 2s ease-in-out infinite;
 }
 
 .nav-item.active .item-tag-live {
-  background: rgba(4, 47, 46, 0.18);
-  color: #042f2e;
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
   animation: none;
 }
 
@@ -420,14 +437,25 @@ defineEmits(['update:activeTab'])
 
 .polije-card:hover {
   background: rgba(30, 41, 59, 0.95);
-  border-color: rgba(0, 223, 162, 0.4);
+  border-color: rgba(16, 185, 129, 0.3);
   transform: translateY(-1px);
 }
 
 .polije-card.active {
-  background: linear-gradient(135deg, rgba(0, 223, 162, 0.12) 0%, rgba(5, 150, 105, 0.18) 100%);
-  border-color: #00dfa2;
-  box-shadow: 0 0 16px rgba(0, 223, 162, 0.2);
+  background: rgba(5, 150, 105, 0.12);
+  border-color: rgba(16, 185, 129, 0.4);
+  position: relative;
+}
+
+.polije-card.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: #10b981;
+  border-radius: 0 2px 2px 0;
 }
 
 .sidebar-avatar-wrap {
@@ -445,8 +473,7 @@ defineEmits(['update:activeTab'])
 }
 
 .polije-card.active .sidebar-avatar-wrap {
-  border-color: #00dfa2;
-  box-shadow: 0 0 10px rgba(0, 223, 162, 0.45);
+  border-color: #10b981;
 }
 
 .sidebar-avatar-img {
@@ -486,7 +513,7 @@ defineEmits(['update:activeTab'])
 }
 
 .polije-card.active .polije-title {
-  color: #00dfa2;
+  color: #10b981;
 }
 
 .polije-sub {
@@ -500,9 +527,8 @@ defineEmits(['update:activeTab'])
 .bottom-active-dot {
   width: 5px;
   height: 5px;
-  background-color: #00dfa2;
+  background-color: #10b981;
   border-radius: 50%;
-  box-shadow: 0 0 6px #00dfa2;
 }
 
 @media (max-width: 1024px) {

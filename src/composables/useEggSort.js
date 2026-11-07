@@ -216,15 +216,14 @@ export function useEggSort() {
   }
 
   const resetSession = () => {
-    if (confirm('Apakah Anda yakin ingin me-reset sesi penghitungan telur?')) {
-      totalScanned.value = 0
-      gradeACount.value = 0
-      gradeBCount.value = 0
-      rejectCount.value = 0
-      rejectCapacity.value = 0
-      scanLogs.value = []
-      triggerToast('Sesi pemindaian berhasil di-reset ke nol.')
-    }
+    // Modal konfirmasi sekarang handled by ResetSessionModal di SubHeader.vue
+    totalScanned.value = 0
+    gradeACount.value = 0
+    gradeBCount.value = 0
+    rejectCount.value = 0
+    rejectCapacity.value = 0
+    scanLogs.value = []
+    triggerToast('Sesi pemindaian berhasil di-reset ke nol.')
   }
 
   const toggleStreamMode = () => {
@@ -264,7 +263,7 @@ export function useEggSort() {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-    triggerToast('File CSV berhasil diunduh.')
+    // Toast success notification handled by ScanLogTable.vue
   }
 
   // Jeda simulasi sementara saat scan foto real aktif

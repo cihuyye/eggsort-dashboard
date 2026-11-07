@@ -27,7 +27,7 @@
       </button>
 
       <!-- Reset Session Button -->
-      <button class="action-btn reset-btn" @click="resetSession" title="Reset penghitungan sesi">
+      <button class="action-btn reset-btn" @click="showResetModal = true" title="Reset penghitungan sesi">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
           <path d="M21 3v5h-5" />
@@ -37,11 +37,21 @@
         <span>Reset Sesi</span>
       </button>
     </div>
+
+    <!-- Reset Confirmation Modal -->
+    <ResetSessionModal
+      :show="showResetModal"
+      @confirm="handleResetConfirm"
+      @cancel="showResetModal = false"
+    />
   </div>
 </template>
 
 <script setup>
-defineProps({
+import { ref } from 'vue'
+import ResetSessionModal from './ResetSessionModal.vue'
+
+const props = defineProps({
   isAutoMode: {
     type: Boolean,
     default: true
@@ -55,6 +65,16 @@ defineProps({
     required: true
   }
 })
+
+const showResetModal = ref(false)
+
+const handleResetConfirm = () => {
+  showResetModal.value = false
+  // Call parent's resetSession after modal closes
+  setTimeout(() => {
+    props.resetSession()
+  }, 100)
+}
 </script>
 
 <style scoped>

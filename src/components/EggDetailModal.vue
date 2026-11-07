@@ -1,19 +1,17 @@
 <template>
-  <Transition name="modal-zoom">
+  <Transition name="modal-fade">
     <div v-if="show" class="modal-backdrop" @click.self="$emit('close')">
-      <div class="modal-window">
-        <!-- Modal Top Bar -->
-        <div class="modal-top">
-          <div class="modal-id-row">
-            <span class="pulse-live-dot"></span>
-            <span class="egg-title-code font-mono">{{ eggData.eggId || '#EGG-1428' }}</span>
-            <span class="grade-badge-chip" :class="gradeClass">
+      <div class="modal-container">
+        <!-- Header -->
+        <div class="modal-header">
+          <div class="header-left">
+            <span class="pulse-dot"></span>
+            <span class="egg-id">{{ eggData.eggId || '#EGG-1428' }}</span>
+            <span class="grade-badge" :class="gradeClass">
               {{ eggData.grade || 'GRADE A' }}
             </span>
-            <span class="batch-tag font-mono">Tray B-04</span>
           </div>
-
-          <button class="modal-close-icon-btn" @click="$emit('close')" title="Tutup Pop-up">
+          <button class="close-btn" @click="$emit('close')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
@@ -21,169 +19,200 @@
           </button>
         </div>
 
-        <!-- Modal Main Grid -->
-        <div class="modal-grid">
-          <!-- Left: Visual Inspection Area -->
-          <div class="visual-panel">
-            <div class="visual-viewport" :class="inspectMode">
-              <div class="viewport-rollers"></div>
-
-              <!-- Real Photo Preview (jika ada gambar dari API) -->
-              <div v-if="eggData.imageUrl" class="real-egg-modal-wrap">
-                <img :src="eggData.imageUrl" class="real-egg-modal-img" alt="Foto Telur Detail" />
+        <!-- Content Grid -->
+        <div class="modal-content">
+          <!-- Left: Visual -->
+          <div class="visual-section">
+            <div class="viewport" :class="inspectMode">
+              <!-- Real Photo -->
+              <div v-if="eggData.imageUrl" class="photo-wrapper">
+                <img :src="eggData.imageUrl" alt="Egg" />
               </div>
 
-              <!-- Egg Graphic (Simulasi Bawaan) -->
-              <div v-else class="egg-graphic" :class="[inspectMode, gradeClass]">
-                <div v-if="inspectMode === 'candling'" class="candling-glow-effect"></div>
+              <!-- Simulated Egg -->
+              <div v-else class="egg-sim" :class="[inspectMode, gradeClass]">
+                <div v-if="inspectMode === 'candling'" class="candling-glow"></div>
                 <div v-if="inspectMode === 'candling'" class="air-chamber">
                   <span>{{ eggData.airDepthCm || 0.32 }}cm</span>
                 </div>
-                <div v-if="inspectMode === 'candling'" class="yolk-core"></div>
-                <div v-if="eggData.yoloDefectClass === 'cracked'" class="crack-line"></div>
-                <div v-if="eggData.yoloDefectClass === 'dirt'" class="dirt-patch"></div>
+                <div v-if="inspectMode === 'candling'" class="yolk"></div>
+                <div v-if="eggData.yoloDefectClass === 'cracked'" class="crack"></div>
+                <div v-if="eggData.yoloDefectClass === 'dirt'" class="dirt"></div>
               </div>
 
-              <!-- Reticle HUD -->
-              <div class="hud-reticle">
-                <span class="reticle-corner tl"></span>
-                <span class="reticle-corner tr"></span>
-                <span class="reticle-corner bl"></span>
-                <span class="reticle-corner br"></span>
-                <div class="hud-center-cross"></div>
-                <div class="hud-dimension-tag font-mono">
+              <!-- HUD -->
+              <div class="hud">
+                <span class="corner tl"></span>
+                <span class="corner tr"></span>
+                <span class="corner bl"></span>
+                <span class="corner br"></span>
+                <div class="crosshair"></div>
+                <div class="dimension">
                   {{ eggData.length || 58.2 }}mm × {{ eggData.width || 43.1 }}mm
                 </div>
               </div>
 
-              <!-- View Mode Switcher -->
-              <div class="viewport-mode-switcher">
-                <button
-                  class="mode-pill-btn"
-                  :class="{ active: inspectMode === 'top' }"
-                  @click="inspectMode = 'top'"
-                >
-                  Cangkang (Top)
+              <!-- Mode Toggle -->
+              <div class="mode-toggle">
+                <button :class="{ active: inspectMode === 'top' }" @click="inspectMode = 'top'">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                  </svg>
+                  Cangkang
                 </button>
-                <button
-                  class="mode-pill-btn"
-                  :class="{ active: inspectMode === 'candling' }"
-                  @click="inspectMode = 'candling'"
-                >
-                  Candling (Interior)
+                <button :class="{ active: inspectMode === 'candling' }" @click="inspectMode = 'candling'">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                  Candling
                 </button>
               </div>
             </div>
 
-            <!-- Fast Actuator Status Bar -->
-            <div class="actuator-mini-bar">
-              <div class="actuator-pill">
-                <span class="act-dot"></span>
-                <span>Aktuator: <strong>{{ eggData.actuator || 'Gate 1 (Solenoid)' }}</strong></span>
-              </div>
-              <span class="trig-time font-mono">Resp: {{ eggData.triggerTime || '135ms' }}</span>
+            <!-- Actuator -->
+            <div class="actuator">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+              </svg>
+              <span>{{ eggData.actuator || 'Gate 1 → Ritel Mutu I' }}</span>
+              <span class="time">{{ eggData.triggerTime || '135ms' }}</span>
             </div>
           </div>
 
-          <!-- Right: Visual Gauges & Scores (No heavy text!) -->
-          <div class="metrics-panel">
-            <!-- Overall Score Ring -->
-            <div class="score-card">
-              <div class="score-circle-box">
-                <svg class="score-svg" viewBox="0 0 36 36">
-                  <path
-                    class="circle-bg"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                  <path
-                    class="circle-progress"
-                    :stroke-dasharray="`${eggData.confidence || 98.4}, 100`"
-                    :class="gradeClass"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
+          <!-- Right: Metrics -->
+          <div class="metrics-section">
+            <!-- Confidence -->
+            <div class="confidence">
+              <div class="ring">
+                <svg viewBox="0 0 36 36">
+                  <path class="ring-bg" d="M18 2.0845a15.9155 15.9155 0 010 31.831 15.9155 15.9155 0 010-31.831" />
+                  <path class="ring-fill" :class="gradeClass" :stroke-dasharray="`${eggData.confidence || 98.4}, 100`" d="M18 2.0845a15.9155 15.9155 0 010 31.831 15.9155 15.9155 0 010-31.831" />
                 </svg>
-                <div class="score-num font-mono">
-                  <span>{{ eggData.confidence || 98.4 }}%</span>
+                <div class="value">
+                  <span class="num">{{ eggData.confidence || 98.4 }}</span>
+                  <span class="pct">%</span>
                 </div>
               </div>
-              <div class="score-info">
-                <div class="score-title">AI Confidence Score</div>
-                <div class="score-status" :class="gradeClass">{{ eggData.gradeLabel || 'Prima' }}</div>
-                <div class="yolo-val font-mono">YOLOv8: {{ eggData.yoloProbability || 0.984 }}</div>
-              </div>
-            </div>
-
-            <!-- Mini Progress Visuals -->
-            <div class="progress-meters-card">
-              <!-- Meter 1: Shape Index (Normal 72-76%) -->
-              <div class="meter-item">
-                <div class="meter-head">
-                  <span class="meter-title">Shape Index (SI)</span>
-                  <span class="meter-value font-mono">{{ eggData.shapeIndex || 74.05 }}%</span>
-                </div>
-                <div class="meter-track">
-                  <div
-                    class="meter-fill"
-                    :style="{ width: `${Math.min(100, ((eggData.shapeIndex || 74) / 85) * 100)}%` }"
-                    :class="gradeClass"
-                  ></div>
-                  <div class="safe-zone" style="left: 72%; width: 5%" title="Zona Normal SNI (72-76%)"></div>
-                </div>
-                <div class="meter-footer">
-                  <span>Lonjong (&lt;72%)</span>
-                  <span class="text-teal font-bold">Ideal (72-76%)</span>
-                  <span>Bulat (&gt;76%)</span>
-                </div>
-              </div>
-
-              <!-- Meter 2: Kantung Udara -->
-              <div class="meter-item">
-                <div class="meter-head">
-                  <span class="meter-title">Kantung Udara</span>
-                  <span class="meter-value font-mono">{{ eggData.airDepthCm || 0.32 }} cm</span>
-                </div>
-                <div class="meter-track">
-                  <div
-                    class="meter-fill"
-                    :style="{ width: `${Math.min(100, ((eggData.airDepthCm || 0.32) / 1.0) * 100)}%` }"
-                    :class="eggData.airDepthCm > 0.9 ? 'grade-reject' : 'grade-a'"
-                  ></div>
-                  <div class="safe-zone" style="left: 0%; width: 50%" title="Batas Segar (<0.5cm)"></div>
-                </div>
-                <div class="meter-footer">
-                  <span class="text-teal font-bold">&lt; 0.5cm (Segar)</span>
-                  <span>0.5 - 0.9cm (Toleransi)</span>
-                  <span class="text-red">&gt; 0.9cm (Reject)</span>
-                </div>
-              </div>
-
-              <!-- Meter 3: Integritas Cangkang -->
-              <div class="meter-item">
-                <div class="meter-head">
-                  <span class="meter-title">Integritas Cangkang</span>
-                  <span class="meter-value" :class="gradeClass">{{ eggData.shellIntegrity || 'Bersih' }}</span>
-                </div>
-                <div class="chip-status-row">
-                  <span class="status-badge" :class="{ 'badge-ok': eggData.grade !== 'REJECT', 'badge-fail': eggData.grade === 'REJECT' }">
-                    {{ eggData.grade === 'REJECT' ? 'Terdeteksi Cacat' : 'Utuh & Bersih' }}
-                  </span>
-                  <span class="status-badge badge-neutral font-mono">
-                    {{ formattedHaugh }}
-                  </span>
-                </div>
+              <div class="info">
+                <div class="label">AI Confidence</div>
+                <div class="grade" :class="gradeClass">{{ eggData.gradeLabel || 'Mutu Prima' }}</div>
+                <div class="yolo">YOLOv8: {{ eggData.yoloProbability || 0.984 }}</div>
               </div>
             </div>
 
-            <!-- Rekomendasi Tindakan Selanjutnya Berdasarkan SNI 3926:2023 -->
-            <div class="sni-action-card" :class="gradeClass">
-              <div class="sni-action-card-header">
-                <span class="sni-badge">STANDAR SNI 3926:2023</span>
-                <span class="sni-title-tag">TINDAKAN SELANJUTNYA &amp; PENANGANAN</span>
+            <!-- Metrics Grid -->
+            <div class="metrics">
+              <!-- Shape Index -->
+              <div class="metric">
+                <div class="metric-head">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="16" />
+                    <line x1="8" y1="12" x2="16" y2="12" />
+                  </svg>
+                  <span>Shape Index</span>
+                </div>
+                <div class="metric-val">{{ eggData.shapeIndex || 74.05 }}<span>%</span></div>
+                <div class="bar">
+                  <div class="fill" :class="gradeClass" :style="{ width: `${Math.min(100, (eggData.shapeIndex || 74) / 85 * 100)}%` }"></div>
+                  <div class="zone" style="left: 72%; width: 5%"></div>
+                </div>
+                <div class="metric-foot">
+                  <span>Ideal SNI</span>
+                  <span>72-76%</span>
+                </div>
               </div>
-              <p class="sni-action-narrative">{{ eggData.sniAction || defaultDetailSniAction }}</p>
-              <div class="sni-meta-pills">
-                <span class="sni-meta-pill">📋 Acuan: {{ eggData.standardRef || 'SNI 3926:2023 (Tabel 1 & Pasal 8-10)' }}</span>
-                <span class="sni-meta-pill">🎯 Jalur: {{ eggData.actuator || 'Gate 1 (Solenoid)' }}</span>
+
+              <!-- Air Chamber -->
+              <div class="metric">
+                <div class="metric-head">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z" />
+                  </svg>
+                  <span>Kantung Udara</span>
+                </div>
+                <div class="metric-val">{{ eggData.airDepthCm || 0.32 }}<span>cm</span></div>
+                <div class="bar">
+                  <div class="fill" :class="airClass" :style="{ width: `${Math.min(100, (eggData.airDepthCm || 0.32) / 1.0 * 100)}%` }"></div>
+                  <div class="zone" style="left: 0%; width: 50%"></div>
+                </div>
+                <div class="metric-foot">
+                  <span>Kesegaran</span>
+                  <span :class="airClass">{{ airStatus }}</span>
+                </div>
+              </div>
+
+              <!-- Shell -->
+              <div class="metric">
+                <div class="metric-head">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  </svg>
+                  <span>Integritas Cangkang</span>
+                </div>
+                <div class="metric-txt" :class="gradeClass">{{ eggData.shellIntegrity || 'Bersih' }}</div>
+                <div class="badges">
+                  <span :class="shellClass">{{ shellText }}</span>
+                  <span class="haugh">{{ formattedHaugh }}</span>
+                </div>
+              </div>
+
+              <!-- Brightness -->
+              <div class="metric">
+                <div class="metric-head">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="5" />
+                    <line x1="12" y1="1" x2="12" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="23" />
+                  </svg>
+                  <span>Brightness</span>
+                </div>
+                <div class="metric-val">{{ eggData.meanBrightness || 142.6 }}</div>
+                <div class="bar">
+                  <div class="fill bright" :style="{ width: `${Math.min(100, (eggData.meanBrightness || 142) / 255 * 100)}%` }"></div>
+                </div>
+                <div class="metric-foot">
+                  <span>Pencahayaan</span>
+                  <span>Normal</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- SNI Actions -->
+            <div class="sni" :class="gradeClass">
+              <div class="sni-head">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+                <div>
+                  <div class="sni-header-row">
+                    <span class="sni-badge">SNI 3926:2023</span>
+                    <span class="gemini-badge">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                      </svg>
+                      Gemini AI
+                    </span>
+                  </div>
+                  <span class="sni-title">Rekomendasi AI & Tindakan Selanjutnya</span>
+                </div>
+              </div>
+              
+              <!-- Gemini Recommendation -->
+              <div class="gemini-recommendation">
+                <div v-if="isLoadingGemini" class="loading-skeleton">
+                  <div class="skeleton-line"></div>
+                  <div class="skeleton-line short"></div>
+                  <div class="skeleton-line"></div>
+                </div>
+                <p v-else class="recommendation-text">{{ geminiRecommendation }}</p>
+              </div>
+              
+              <!-- SNI Action Badges -->
+              <div class="sni-actions">
+                <span v-for="a in sniActions" :key="a">{{ a }}</span>
               </div>
             </div>
           </div>
@@ -194,7 +223,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -202,32 +231,123 @@ const props = defineProps({
   triggerToast: { type: Function, default: () => {} }
 })
 
-const emit = defineEmits(['close'])
+defineEmits(['close'])
 
-const inspectMode = ref('top') // 'top' or 'candling'
+const inspectMode = ref('top')
+const geminiRecommendation = ref('')
+const isLoadingGemini = ref(false)
 
 const gradeClass = computed(() => {
-  const g = (props.eggData?.grade || 'Grade A').toUpperCase()
-  if (g.includes('REJECT') || g.includes('MUTU III')) return 'grade-reject'
-  if (g.includes('B') || g.includes('MUTU II')) return 'grade-b'
-  return 'grade-a'
+  const g = (props.eggData?.grade || 'GRADE A').toUpperCase()
+  if (g.includes('REJECT') || g.includes('III')) return 'reject'
+  if (g.includes('B') || g.includes('II')) return 'b'
+  return 'a'
 })
 
-const defaultDetailSniAction = computed(() => {
-  const g = (props.eggData?.grade || 'Grade A').toUpperCase()
-  if (g.includes('A') || g.includes('MUTU I')) {
-    return 'Layak konsumsi langsung segar. Dikemas dalam kemasan ritel berlabel resmi minimal mencantumkan nama produk, tanggal produksi, NKV, jumlah butir, dan tingkatan mutu (Pasal 8 & 9 SNI 3926:2023). Simpan pada suhu ruang maks 30°C / kelembaban maks 90% (Pasal 10).'
-  }
-  if (g.includes('B') || g.includes('MUTU II')) {
-    return 'Lolos konsumsi reguler & bahan baku industri olahan pangan (bakery/kue/mie). Sanitasi kering noda kerabang (toleransi noda ≤ 1/32 luas permukaan Tabel 1 SNI 3926:2023) tanpa perendaman air berlebih. Prioritaskan distribusi cepat.'
-  }
-  return 'Ditolak dari peredaran telur ayam konsumsi segar utuh (Tabel 1 & 2 SNI 3926:2023) demi keamanan pangan dan pencegahan pencemaran mikroba patogen (Salmonella spp. & Enterobacteriaceae). Alihkan segera ke wadah karantina afkir/pemusnahan.'
+const airClass = computed(() => {
+  const d = props.eggData?.airDepthCm || 0.32
+  if (d > 0.9) return 'reject'
+  if (d > 0.5) return 'b'
+  return 'a'
 })
+
+const airStatus = computed(() => {
+  const d = props.eggData?.airDepthCm || 0.32
+  if (d > 0.9) return 'Tidak Segar'
+  if (d > 0.5) return 'Toleransi'
+  return 'Sangat Segar'
+})
+
+const shellClass = computed(() => props.eggData?.grade === 'REJECT' ? 'fail' : 'ok')
+const shellText = computed(() => props.eggData?.grade === 'REJECT' ? 'Terdeteksi Cacat' : 'Utuh & Bersih')
 
 const formattedHaugh = computed(() => {
   const raw = String(props.eggData?.internalHaugh || '82').trim()
-  const cleanNum = raw.replace(/^[a-zA-Z\s\-:]+/, '').trim() || '82'
-  return `${cleanNum} HU`
+  const num = raw.replace(/^[a-zA-Z\s\-:]+/, '').trim() || '82'
+  return `${num} HU`
+})
+
+const sniActions = computed(() => {
+  const g = gradeClass.value
+  if (g === 'a') return ['Kemasan Ritel Resmi', 'Simpan ≤ 30°C', 'Konsumsi Langsung', 'Label SNI']
+  if (g === 'b') return ['Industri Pangan', 'Sanitasi Kering', 'Distribusi Cepat', 'Noda ≤ 1/32']
+  return ['Karantina Afkir', 'Tidak Edar', 'Risiko Patogen', 'Pemusnahan']
+})
+
+// Gemini AI Recommendation
+async function fetchGeminiRecommendation() {
+  if (!props.eggData?.eggId) return
+  
+  isLoadingGemini.value = true
+  geminiRecommendation.value = ''
+  
+  try {
+    // Build prompt based on egg metrics
+    const prompt = `Sebagai ahli keamanan pangan SNI 3926:2023, analisis telur dengan data berikut:
+- ID: ${props.eggData.eggId || '#EGG-XXXX'}
+- Grade: ${props.eggData.grade || 'GRADE A'}
+- Shape Index: ${props.eggData.shapeIndex || 74.05}%
+- Kantung Udara: ${props.eggData.airDepthCm || 0.32} cm
+- Integritas Cangkang: ${props.eggData.shellIntegrity || 'Bersih'}
+- Deteksi Cacat: ${props.eggData.yoloDefectClass || 'Tidak Ada'}
+- Confidence Score: ${props.eggData.confidence || 98.4}%
+
+Berikan rekomendasi singkat (maksimal 3 kalimat) mengenai: (1) analisis kesegaran, (2) instruksi penyimpanan optimal, dan (3) jalur distribusi yang sesuai.`
+
+    // Replace with your actual Gemini API endpoint
+    // Example: https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent
+    const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'YOUR_API_KEY_HERE'
+    const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent'
+    
+    const response = await fetch(`${GEMINI_ENDPOINT}?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: prompt }]
+        }],
+        generationConfig: {
+          temperature: 0.4,
+          maxOutputTokens: 200,
+        }
+      })
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Rekomendasi tidak tersedia.'
+    
+    geminiRecommendation.value = text.trim()
+  } catch (error) {
+    console.error('[Gemini AI] Error:', error)
+    // Fallback recommendation based on grade
+    const g = gradeClass.value
+    if (g === 'a') {
+      geminiRecommendation.value = 'Telur berkualitas prima dengan kesegaran optimal. Simpan pada suhu ≤30°C untuk mempertahankan mutu. Cocok untuk kemasan ritel resmi dan konsumsi langsung.'
+    } else if (g === 'b') {
+      geminiRecommendation.value = 'Telur masih layak konsumsi dengan catatan toleransi minor. Prioritaskan sanitasi kering dan distribusi cepat. Sesuai untuk industri pangan olahan.'
+    } else {
+      geminiRecommendation.value = 'Telur tidak memenuhi standar SNI. Karantina segera dan tidak boleh diedarkan untuk konsumsi. Risiko kontaminasi patogen tinggi.'
+    }
+  } finally {
+    isLoadingGemini.value = false
+  }
+}
+
+// Watch for modal open and egg data changes
+watch(() => props.show, (newVal) => {
+  if (newVal && props.eggData?.eggId) {
+    fetchGeminiRecommendation()
+  }
+})
+
+watch(() => props.eggData?.eggId, (newVal) => {
+  if (newVal && props.show) {
+    fetchGeminiRecommendation()
+  }
 })
 </script>
 
@@ -235,8 +355,9 @@ const formattedHaugh = computed(() => {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(5, 10, 20, 0.78);
+  background: rgba(15, 23, 42, 0.4);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -245,634 +366,870 @@ const formattedHaugh = computed(() => {
   overflow-y: auto;
 }
 
-.modal-window {
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: 14px;
+.modal-container {
+  position: relative;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
   width: 100%;
-  max-width: 820px;
+  max-width: 920px;
   max-height: calc(100vh - 32px);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(148, 163, 184, 0.1);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  margin: auto;
-  transition: all 0.25s ease;
+  z-index: 1001;
 }
 
-/* Modal Top Bar */
-.modal-top {
+/* Header */
+.modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 18px;
-  border-bottom: 1px solid var(--border-subtle);
-  background: var(--bg-card-subtle);
-  flex-shrink: 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  backdrop-filter: blur(8px);
 }
 
-.modal-id-row {
+.header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
-.pulse-live-dot {
+.pulse-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: var(--teal-primary);
-  box-shadow: 0 0 8px var(--teal-primary);
-  animation: pulse-dot 1.5s infinite;
+  background: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  animation: pulse 1.5s infinite;
 }
 
-.egg-title-code {
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+}
+
+.egg-id {
   font-size: 1.05rem;
   font-weight: 800;
-  color: var(--text-title);
+  color: #0f172a;
+  font-family: var(--font-mono);
 }
 
-.grade-badge-chip {
-  font-size: 0.72rem;
+.grade-badge {
+  font-size: 0.7rem;
   font-weight: 800;
-  padding: 3px 10px;
+  padding: 4px 12px;
   border-radius: 9999px;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.05em;
 }
 
-.grade-badge-chip.grade-a {
+.grade-badge.a {
   background: rgba(16, 185, 129, 0.15);
   color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.4);
+  border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
-.grade-badge-chip.grade-b {
+.grade-badge.b {
   background: rgba(59, 130, 246, 0.15);
   color: #3b82f6;
-  border: 1px solid rgba(59, 130, 246, 0.4);
+  border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
-.grade-badge-chip.grade-reject {
+.grade-badge.reject {
   background: rgba(239, 68, 68, 0.15);
   color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
-.batch-tag {
-  font-size: 0.68rem;
-  color: var(--text-muted);
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  padding: 2px 7px;
-  border-radius: 5px;
-}
-
-.modal-close-icon-btn {
+.close-btn {
   background: transparent;
   border: none;
-  width: 30px;
-  height: 30px;
-  border-radius: 7px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
+  color: #64748b;
   cursor: pointer;
-  transition: all 0.2s ease;
+  padding: 6px;
+  border-radius: 6px;
+  transition: all 0.2s;
 }
 
-.modal-close-icon-btn:hover {
-  background-color: var(--bg-card-hover);
-  color: var(--text-title);
+.close-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
 }
 
-.modal-close-icon-btn svg {
-  width: 17px;
-  height: 17px;
+.close-btn svg {
+  width: 18px;
+  height: 18px;
 }
 
-/* Modal Grid */
-.modal-grid {
+/* Content */
+.modal-content {
   display: grid;
-  grid-template-columns: 1.05fr 1fr;
-  gap: 16px;
-  padding: 14px 18px 16px 18px;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 20px;
+  padding: 20px;
   overflow-y: auto;
-  max-height: calc(100vh - 90px);
 }
 
-/* Visual Panel */
-.visual-panel {
+/* Visual */
+.visual-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
-.visual-viewport {
-  height: 220px;
-  background-color: #0b111e;
+.viewport {
+  position: relative;
+  aspect-ratio: 1;
+  background: radial-gradient(circle, rgba(248, 250, 252, 1) 0%, rgba(241, 245, 249, 1) 100%);
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
-  position: relative;
   overflow: hidden;
-  border: 1px solid #1e293b;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.viewport-rollers {
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(90deg, #131d2e 0px, #131d2e 14px, #0f172a 14px, #0f172a 28px);
-  opacity: 0.4;
-}
-
-.real-egg-modal-wrap {
-  position: relative;
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.real-egg-modal-img {
-  max-width: 120px;
-  max-height: 155px;
+.photo-wrapper img {
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-  border-radius: 50% 50% 45% 45% / 60% 60% 40% 40%;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.egg-graphic {
-  width: 85px;
-  height: 120px;
+.egg-sim {
+  width: 180px;
+  height: 240px;
+  background: radial-gradient(ellipse, rgba(226, 232, 240, 0.95) 0%, rgba(203, 213, 225, 0.9) 100%);
   border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-  transform: rotate(-90deg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
   position: relative;
-  z-index: 5;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
-  transition: all 0.3s ease;
 }
 
-.egg-graphic.top {
-  background: radial-gradient(circle at 35% 35%, #fce7cf 0%, #e2b083 45%, #9a6538 90%);
+.egg-sim.candling {
+  background: radial-gradient(ellipse, rgba(251, 191, 36, 0.3) 0%, rgba(245, 158, 11, 0.2) 50%, rgba(30, 41, 59, 0.8) 100%);
 }
 
-.egg-graphic.candling {
-  background: radial-gradient(circle at 50% 50%, #fff7ed 0%, #fb923c 40%, #c2410c 80%, #7c2d12 100%);
-  box-shadow: 0 0 45px rgba(251, 146, 60, 0.7);
-}
-
-.candling-glow-effect {
+.candling-glow {
   position: absolute;
-  inset: -15px;
+  inset: 10%;
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.4) 0%, transparent 70%);
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(251, 146, 60, 0.4) 0%, transparent 70%);
-  filter: blur(14px);
+  animation: glow 2s infinite;
+}
+
+@keyframes glow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
 
 .air-chamber {
   position: absolute;
-  top: 4px;
-  left: 15px;
-  right: 15px;
-  height: 26px;
-  border-bottom: 2px dashed rgba(255, 255, 255, 0.7);
-  background: rgba(255, 255, 255, 0.25);
-  border-radius: 40% 40% 0 0;
+  top: 15%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 30px;
+  background: rgba(100, 116, 139, 0.3);
+  border-radius: 50%;
+  border: 1px dashed rgba(148, 163, 184, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.air-chamber span {
-  font-size: 0.55rem;
-  color: #fff;
-  font-family: var(--font-mono);
-  font-weight: 800;
-  transform: rotate(90deg);
-}
-
-.yolk-core {
-  position: absolute;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #ea580c 0%, #9a3412 80%);
-  top: 45%;
-  left: 35%;
-  filter: blur(5px);
-}
-
-.crack-line {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  width: 50px;
-  height: 50px;
-  border-left: 2px solid #ef4444;
-  border-top: 2px solid #ef4444;
-  transform: rotate(45deg);
-  filter: drop-shadow(0 0 4px #ef4444);
-}
-
-.dirt-patch {
-  position: absolute;
-  width: 14px;
-  height: 18px;
-  border-radius: 50%;
-  background: #3e2723;
-  top: 45px;
-  left: 55px;
-}
-
-/* Reticle HUD */
-.hud-reticle {
-  position: absolute;
-  width: 160px;
-  height: 120px;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.reticle-corner {
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  border-color: #10b981;
-}
-
-.reticle-corner.tl { top: 0; left: 0; border-top: 2.5px solid; border-left: 2.5px solid; }
-.reticle-corner.tr { top: 0; right: 0; border-top: 2.5px solid; border-right: 2.5px solid; }
-.reticle-corner.bl { bottom: 0; left: 0; border-bottom: 2.5px solid; border-left: 2.5px solid; }
-.reticle-corner.br { bottom: 0; right: 0; border-bottom: 2.5px solid; border-right: 2.5px solid; }
-
-.hud-center-cross {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.hud-center-cross::before {
-  content: '';
-  position: absolute;
-  width: 14px;
-  height: 1px;
-  background: rgba(16, 185, 129, 0.6);
-}
-
-.hud-center-cross::after {
-  content: '';
-  position: absolute;
-  height: 14px;
-  width: 1px;
-  background: rgba(16, 185, 129, 0.6);
-}
-
-.hud-dimension-tag {
-  position: absolute;
-  bottom: -22px;
-  right: 0;
-  font-size: 0.65rem;
-  color: #34d399;
-  background: rgba(0, 0, 0, 0.6);
-  padding: 1px 5px;
-  border-radius: 4px;
-}
-
-.viewport-mode-switcher {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  display: flex;
-  gap: 4px;
-  background: rgba(15, 23, 42, 0.85);
-  padding: 3px;
-  border-radius: 7px;
-  z-index: 20;
-}
-
-.mode-pill-btn {
-  background: transparent;
-  border: none;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   font-weight: 700;
-  color: #94a3b8;
-  padding: 4px 8px;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  color: #cbd5e1;
 }
 
-.mode-pill-btn.active {
-  background: var(--teal-primary);
-  color: #ffffff;
+.yolk {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60px;
+  height: 60px;
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.6) 0%, rgba(245, 158, 11, 0.4) 100%);
+  border-radius: 50%;
+  border: 2px solid rgba(251, 191, 36, 0.3);
 }
 
-.actuator-mini-bar {
+.crack {
+  position: absolute;
+  top: 30%;
+  left: 40%;
+  width: 2px;
+  height: 40%;
+  background: linear-gradient(180deg, transparent 0%, rgba(239, 68, 68, 0.8) 20%, rgba(239, 68, 68, 0.6) 80%, transparent 100%);
+  transform: rotate(25deg);
+}
+
+.dirt {
+  position: absolute;
+  top: 60%;
+  right: 25%;
+  width: 20px;
+  height: 20px;
+  background: rgba(120, 113, 108, 0.6);
+  border-radius: 50%;
+  filter: blur(2px);
+}
+
+/* HUD */
+.hud {
+  position: absolute;
+  inset: 12px;
+  pointer-events: none;
+}
+
+.corner {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(16, 185, 129, 0.5);
+}
+
+.tl {
+  top: 0;
+  left: 0;
+  border-width: 2px 0 0 2px;
+}
+
+.tr {
+  top: 0;
+  right: 0;
+  border-width: 2px 2px 0 0;
+}
+
+.bl {
+  bottom: 0;
+  left: 0;
+  border-width: 0 0 2px 2px;
+}
+
+.br {
+  bottom: 0;
+  right: 0;
+  border-width: 0 2px 2px 0;
+}
+
+.crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+}
+
+.crosshair::before,
+.crosshair::after {
+  content: '';
+  position: absolute;
+  background: rgba(16, 185, 129, 0.4);
+}
+
+.crosshair::before {
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 1px;
+}
+
+.crosshair::after {
+  top: 0;
+  left: 50%;
+  width: 1px;
+  height: 100%;
+}
+
+.dimension {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: #10b981;
+  background: rgba(15, 23, 42, 0.8);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* Mode Toggle */
+.mode-toggle {
+  position: absolute;
+  top: 12px;
+  left: 12px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--bg-card-subtle);
-  border: 1px solid var(--border-card);
-  padding: 6px 10px;
-  border-radius: 8px;
-  font-size: 0.71rem;
+  gap: 6px;
 }
 
-.actuator-pill {
+.mode-toggle button {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--text-title);
+  padding: 6px 10px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  backdrop-filter: blur(8px);
 }
 
-.act-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--teal-primary);
+.mode-toggle button svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 
-.trig-time {
-  font-size: 0.66rem;
-  color: var(--text-muted);
+.mode-toggle button:hover {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #cbd5e1;
 }
 
-/* Right Metrics Panel */
-.metrics-panel {
+.mode-toggle button.active {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #10b981;
+}
+
+/* Actuator */
+.actuator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  gap: 8px;
+}
+
+.actuator svg {
+  width: 16px;
+  height: 16px;
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+.actuator span:nth-child(2) {
+  flex: 1;
+  font-size: 0.75rem;
+  color: #475569;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actuator .time {
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+/* Metrics */
+.metrics-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+/* Confidence */
+.confidence {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.ring {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+}
+
+.ring svg {
+  transform: rotate(-90deg);
+}
+
+.ring-bg {
+  fill: none;
+  stroke: #e2e8f0;
+  stroke-width: 2.8;
+}
+
+.ring-fill {
+  fill: none;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.5s;
+}
+
+.ring-fill.a {
+  stroke: #10b981;
+}
+
+.ring-fill.b {
+  stroke: #3b82f6;
+}
+
+.ring-fill.reject {
+  stroke: #ef4444;
+}
+
+.value {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.value .num {
+  font-size: 1.4rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: #0f172a;
+}
+
+.value .pct {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.info {
+  flex: 1;
+}
+
+.info .label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.info .grade {
+  font-size: 0.95rem;
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+.info .grade.a {
+  color: #10b981;
+}
+
+.info .grade.b {
+  color: #3b82f6;
+}
+
+.info .grade.reject {
+  color: #ef4444;
+}
+
+.info .yolo {
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+/* Metrics Grid */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.metric {
+  padding: 14px;
+  background: #f8fafc;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 10px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.score-card {
+.metric-head {
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: var(--bg-card-subtle);
-  border: 1px solid var(--border-card);
-  padding: 8px 12px;
-  border-radius: 10px;
+  gap: 8px;
 }
 
-.score-circle-box {
-  width: 48px;
-  height: 48px;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.metric-head svg {
+  width: 16px;
+  height: 16px;
+  color: #10b981;
   flex-shrink: 0;
 }
 
-.score-svg {
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-}
-
-.circle-bg {
-  fill: none;
-  stroke: var(--border-card);
-  stroke-width: 3.8;
-}
-
-.circle-progress {
-  fill: none;
-  stroke-width: 3.8;
-  stroke-linecap: round;
-  transition: stroke-dasharray 0.6s ease;
-}
-
-.circle-progress.grade-a { stroke: var(--grade-a); }
-.circle-progress.grade-b { stroke: var(--grade-b); }
-.circle-progress.grade-reject { stroke: var(--grade-c); }
-
-.score-num {
-  position: absolute;
-  font-size: 0.68rem;
-  font-weight: 800;
-  color: var(--text-title);
-}
-
-.score-title {
-  font-size: 0.68rem;
-  color: var(--text-muted);
-  font-weight: 600;
-}
-
-.score-status {
-  font-size: 0.90rem;
-  font-weight: 800;
-  line-height: 1.2;
-}
-
-.score-status.grade-a { color: var(--grade-a); }
-.score-status.grade-b { color: var(--grade-b); }
-.score-status.grade-reject { color: var(--grade-c); }
-
-.yolo-val {
-  font-size: 0.65rem;
-  color: var(--text-subtle);
-  margin-top: 1px;
-}
-
-/* Progress Meters */
-.progress-meters-card {
-  background: var(--bg-card-subtle);
-  border: 1px solid var(--border-card);
-  padding: 8px 12px;
-  border-radius: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.meter-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.meter-head {
-  display: flex;
-  justify-content: space-between;
+.metric-head span {
   font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.metric-val {
+  font-size: 1.6rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: #0f172a;
+  line-height: 1;
+}
+
+.metric-val span {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-left: 2px;
+}
+
+.metric-txt {
+  font-size: 1.1rem;
   font-weight: 700;
+  margin: 4px 0;
 }
 
-.meter-title {
-  color: var(--text-muted);
+.metric-txt.a {
+  color: #10b981;
 }
 
-.meter-value {
-  color: var(--text-title);
+.metric-txt.b {
+  color: #3b82f6;
 }
 
-.meter-track {
-  height: 7px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: 9999px;
-  overflow: hidden;
+.metric-txt.reject {
+  color: #ef4444;
+}
+
+.bar {
   position: relative;
+  width: 100%;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 9999px;
 }
 
-.meter-fill {
+.fill {
   height: 100%;
   border-radius: 9999px;
-  transition: width 0.4s ease;
+  transition: width 0.5s;
 }
 
-.meter-fill.grade-a { background-color: var(--grade-a); }
-.meter-fill.grade-b { background-color: var(--grade-b); }
-.meter-fill.grade-reject { background-color: var(--grade-c); }
+.fill.a,
+.fill.bright {
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+}
 
-.safe-zone {
+.fill.b {
+  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.fill.reject {
+  background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+}
+
+.zone {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  background: rgba(16, 185, 129, 0.25);
-  border-left: 1px solid rgba(16, 185, 129, 0.6);
-  border-right: 1px solid rgba(16, 185, 129, 0.6);
+  top: -2px;
+  height: 10px;
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: 2px;
 }
 
-.meter-footer {
+.metric-foot {
   display: flex;
   justify-content: space-between;
-  font-size: 0.6rem;
-  color: var(--text-subtle);
-}
-
-.text-teal { color: var(--teal-primary); }
-.text-red { color: var(--grade-c); }
-.font-bold { font-weight: 700; }
-
-.chip-status-row {
-  display: flex;
-  gap: 8px;
+  font-size: 0.68rem;
   margin-top: 2px;
 }
 
-.status-badge {
+.metric-foot span:first-child {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.metric-foot span:last-child {
+  font-weight: 700;
+  color: #475569;
+}
+
+.metric-foot .a {
+  color: #10b981;
+}
+
+.metric-foot .b {
+  color: #3b82f6;
+}
+
+.metric-foot .reject {
+  color: #ef4444;
+}
+
+.badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.badges span {
   font-size: 0.68rem;
   font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid;
 }
 
-.badge-ok {
-  background: rgba(16, 185, 129, 0.12);
-  color: var(--grade-a);
+.badges .ok {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.3);
 }
 
-.badge-fail {
-  background: rgba(239, 68, 68, 0.12);
-  color: var(--grade-c);
+.badges .fail {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
 }
 
-.badge-neutral {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  color: var(--text-body);
+.badges .haugh {
+  background: rgba(100, 116, 139, 0.1);
+  color: #cbd5e1;
+  border-color: rgba(148, 163, 184, 0.3);
+  font-family: var(--font-mono);
 }
 
-/* Modal Actions */
-/* SNI 3926:2023 Action Recommendation Card */
-.sni-action-card {
-  background-color: var(--bg-card-subtle);
-  border: 1px solid var(--border-card);
-  border-radius: 10px;
-  padding: 8px 12px;
+/* SNI */
+.sni {
+  padding: 16px;
+  background: #f8fafc;
+  border: 1.5px solid;
+  border-radius: 12px;
+}
+
+.sni.a {
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.sni.b {
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.sni.reject {
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.sni-head {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.sni-head svg {
+  width: 20px;
+  height: 20px;
+  color: #10b981;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.sni-head > div {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  margin-bottom: 2px;
+  gap: 6px;
+  flex: 1;
 }
 
-.sni-action-card.grade-a {
-  border-left: 3px solid #10b981;
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.02) 100%);
-}
-
-.sni-action-card.grade-b {
-  border-left: 3px solid #3b82f6;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.02) 100%);
-}
-
-.sni-action-card.grade-reject {
-  border-left: 3px solid #ef4444;
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.02) 100%);
-}
-
-.sni-action-card-header {
+.sni-header-row {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.sni-badge {
-  font-size: 0.60rem;
-  font-weight: 800;
-  background-color: rgba(20, 184, 166, 0.15);
-  color: var(--teal-primary);
-  border: 1px solid rgba(20, 184, 166, 0.3);
-  padding: 1px 5px;
-  border-radius: 4px;
-  letter-spacing: 0.05em;
-}
-
-.sni-title-tag {
-  font-size: 0.62rem;
-  font-weight: 800;
-  color: var(--text-muted);
+.gemini-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #ffffff;
+  border-radius: 6px;
+  text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
-.sni-action-narrative {
-  font-size: 0.69rem;
-  line-height: 1.35;
-  color: var(--text-main);
+.gemini-badge svg {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+}
+
+.sni-badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: #10b981;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.gemini-recommendation {
+  margin: 12px 0 16px;
+  padding: 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.recommendation-text {
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: #475569;
   margin: 0;
-  font-weight: 500;
 }
 
-.sni-meta-pills {
+.loading-skeleton {
   display: flex;
-  gap: 6px;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-line {
+  height: 12px;
+  background: linear-gradient(90deg, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%);
+  background-size: 200% 100%;
+  border-radius: 6px;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+.skeleton-line.short {
+  width: 70%;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.sni-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.sni-actions {
+  display: flex;
   flex-wrap: wrap;
+  gap: 8px;
 }
 
-.sni-meta-pill {
-  font-size: 0.62rem;
+.sni-actions span {
+  font-size: 0.72rem;
   font-weight: 600;
-  background-color: rgba(0, 0, 0, 0.06);
-  color: var(--text-muted);
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 6px 12px;
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 8px;
+  transition: all 0.2s;
 }
 
-/* Transition Animations */
-.modal-zoom-enter-active,
-.modal-zoom-leave-active {
-  transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+.sni.b .sni-actions span {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  border-color: rgba(59, 130, 246, 0.25);
 }
 
-.modal-zoom-enter-from,
-.modal-zoom-leave-to {
+.sni.reject .sni-actions span {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+/* Animation */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.3s;
+}
+
+.modal-fade-enter-active .modal-container,
+.modal-fade-leave-active .modal-container {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
   opacity: 0;
-  transform: scale(0.92);
 }
 
+.modal-fade-enter-from .modal-container,
+.modal-fade-leave-to .modal-container {
+  transform: scale(0.92) translateY(20px);
+  opacity: 0;
+}
+
+/* Scrollbar */
+.modal-content::-webkit-scrollbar,
+.metrics-section::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-content::-webkit-scrollbar-track,
+.metrics-section::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 9999px;
+}
+
+.modal-content::-webkit-scrollbar-thumb,
+.metrics-section::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 9999px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover,
+.metrics-section::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
+
+/* Responsive */
 @media (max-width: 768px) {
-  .modal-grid {
+  .modal-content {
+    grid-template-columns: 1fr;
+  }
+
+  .metrics {
     grid-template-columns: 1fr;
   }
 }
 </style>
-

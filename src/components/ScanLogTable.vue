@@ -33,7 +33,7 @@
           </button>
         </div>
 
-        <button class="export-btn" @click="exportCSV" title="Unduh log riwayat pemindaian ke file CSV">
+        <button class="export-btn" @click="handleExport" title="Unduh log riwayat pemindaian ke file CSV">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
             <polyline points="7 10 12 15 17 10" />
@@ -158,11 +158,25 @@
         Menampilkan {{ displayLogs.length }} dari {{ totalScanned.toLocaleString() }} record tersimpan di SQLite Edge DB
       </div>
     </div>
+
+    <!-- Export Success Toast -->
+    <Transition name="toast-slide">
+      <div v-if="showExportToast" class="export-toast">
+        <svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+          <polyline points="22 4 12 14.01 9 11.01" />
+        </svg>
+        <div class="toast-content">
+          <span class="toast-title">Ekspor Berhasil</span>
+          <span class="toast-desc">File CSV telah diunduh</span>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 
 const props = defineProps({
   scanLogs: {
@@ -189,6 +203,8 @@ const props = defineProps({
 
 const emit = defineEmits(['update:filterGrade', 'open-detail'])
 
+const showExportToast = ref(false)
+
 const filterGrade = computed({
   get: () => props.filterGrade,
   set: (val) => emit('update:filterGrade', val)
@@ -201,18 +217,30 @@ const displayLogs = computed(() => {
   }
   return list.slice(0, 5) // Show top 5 matching the design
 })
+
+const handleExport = () => {
+  props.exportCSV()
+  
+  // Show success toast
+  showExportToast.value = true
+  
+  // Hide after 3 seconds
+  setTimeout(() => {
+    showExportToast.value = false
+  }, 3000)
+}
 </script>
 
 <style scoped>
 .log-card {
   background-color: var(--bg-card);
-  border: 1px solid var(--border-card);
+  border: 1.5px solid var(--border-card);
   border-radius: 14px;
-  padding: 20px;
-  box-shadow: var(--shadow-sm);
+  padding: 22px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
   transition: all 0.2s ease;
 }
 
@@ -243,14 +271,14 @@ const displayLogs = computed(() => {
 }
 
 .log-title {
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 700;
   color: var(--text-title);
 }
 
 .log-subtitle {
-  font-size: 0.75rem;
-  color: var(--text-muted);
+  font-size: 0.72rem;
+  color: var(--text-subtle);
 }
 
 .log-actions {
@@ -511,10 +539,74 @@ const displayLogs = computed(() => {
   background-color: #10b981;
 }
 
+/* Export Success Toast */
+.export-toast {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  background-color: var(--bg-card);
+  border: 1.5px solid var(--teal-primary);
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 12px 32px rgba(5, 150, 105, 0.25), 0 4px 8px rgba(0, 0, 0, 0.1);
+  z-index: 1500;
+  min-width: 280px;
+}
+
+.toast-icon {
+  width: 24px;
+  height: 24px;
+  color: var(--teal-primary);
+  flex-shrink: 0;
+}
+
+.toast-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toast-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-title);
+}
+
+.toast-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* Toast Animation */
+.toast-slide-enter-active,
+.toast-slide-leave-active {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast-slide-enter-from {
+  transform: translateX(120%) translateY(20px);
+  opacity: 0;
+}
+
+.toast-slide-leave-to {
+  transform: translateY(20px);
+  opacity: 0;
+}
+
 @media (max-width: 768px) {
   .log-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .export-toast {
+    bottom: 20px;
+    right: 20px;
+    left: 20px;
+    min-width: unset;
   }
 }
 </style>

@@ -519,13 +519,13 @@ watch(
 <style scoped>
 .chart-card {
   background-color: var(--bg-card);
-  border: 1px solid var(--border-card);
+  border: 1.5px solid var(--border-card);
   border-radius: 14px;
-  padding: 22px 24px;
-  box-shadow: var(--shadow-sm);
+  padding: 24px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
   transition: all 0.25s ease;
 }
 
@@ -544,29 +544,30 @@ watch(
 }
 
 .badge-tag {
-  font-size: 0.65rem;
-  font-weight: 800;
+  font-size: 0.62rem;
+  font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--teal-primary);
-  background-color: rgba(20, 184, 166, 0.12);
-  border: 1px solid rgba(20, 184, 166, 0.25);
-  padding: 2px 7px;
+  background-color: rgba(5, 150, 105, 0.1);
+  border: 1px solid rgba(5, 150, 105, 0.2);
+  padding: 3px 8px;
   border-radius: 5px;
   display: inline-block;
   width: fit-content;
+  text-transform: uppercase;
 }
 
 .chart-title {
-  font-size: 1.15rem;
-  font-weight: 800;
+  font-size: 1.1rem;
+  font-weight: 700;
   color: var(--text-title);
   margin: 0;
   letter-spacing: -0.01em;
 }
 
 .chart-sub {
-  font-size: 0.78rem;
-  color: var(--text-muted);
+  font-size: 0.75rem;
+  color: var(--text-subtle);
   margin: 0;
 }
 

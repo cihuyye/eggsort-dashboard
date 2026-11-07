@@ -14,6 +14,8 @@
         :apiOnline="apiOnline"
         :fps="fps"
         :isAutoMode="isAutoMode"
+        :scanLogs="scanLogs"
+        @open-detail="openEggDetail($event)"
       />
 
       <!-- Content Container -->
@@ -131,12 +133,12 @@
       @close="showDetailModal = false"
     />
 
-    <!-- Real-time Egg Quality Decision Pop-up (Hanya muncul di halaman Dashboard) -->
-    <EggDecisionPopup
+    <!-- Real-time Egg Quality Decision Pop-up: DISABLED, digantikan NotificationDropdown -->
+    <!-- <EggDecisionPopup
       v-if="activeTab === 'dashboard'"
       :currentEgg="currentEgg"
       @open-detail="openEggDetail"
-    />
+    /> -->
   </div>
 </template>
 

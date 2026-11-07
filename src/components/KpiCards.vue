@@ -131,10 +131,10 @@ const formattedReject = computed(() => Number(props.rejectCount).toLocaleString(
 
 .kpi-card {
   background-color: var(--bg-card);
-  border: 1px solid var(--border-card);
+  border: 1.5px solid var(--border-card);
   border-radius: 14px;
-  padding: 18px 20px;
-  box-shadow: var(--shadow-sm);
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -145,7 +145,8 @@ const formattedReject = computed(() => Number(props.rejectCount).toLocaleString(
 
 .kpi-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  border-color: var(--teal-primary);
 }
 
 .kpi-header {
@@ -156,10 +157,11 @@ const formattedReject = computed(() => Number(props.rejectCount).toLocaleString(
 }
 
 .kpi-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  letter-spacing: 0.04em;
+  font-size: 0.70rem;
+  font-weight: 600;
+  color: var(--text-subtle);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .kpi-icon-circle {
@@ -243,9 +245,10 @@ const formattedReject = computed(() => Number(props.rejectCount).toLocaleString(
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-subtle);
-  font-size: 0.75rem;
+  padding-top: 14px;
+  margin-top: 4px;
+  border-top: 1px solid var(--border-card);
+  font-size: 0.72rem;
 }
 
 .kpi-subtext {

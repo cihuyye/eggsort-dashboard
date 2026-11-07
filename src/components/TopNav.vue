@@ -1,7 +1,13 @@
 <template>
   <header class="top-nav">
-    <!-- Right Controls: Status Pills Only -->
+    <!-- Right Controls: Notifications + Status Pills -->
     <div class="header-right">
+      <!-- Notification Bell -->
+      <NotificationDropdown
+        :scanLogs="scanLogs"
+        @open-detail="$emit('open-detail', $event)"
+      />
+
       <!-- Flask AI Backend Status Pill -->
       <div class="status-pill" :class="{ 'status-offline': !apiOnline }" :title="apiOnline ? 'Server AI Flask terhubung' : 'Server AI belum menyala di port 8000'">
         <span class="status-indicator" :style="{ backgroundColor: apiOnline ? '#10b981' : '#ef4444' }"></span>
@@ -22,6 +28,8 @@
 </template>
 
 <script setup>
+import NotificationDropdown from './NotificationDropdown.vue'
+
 defineProps({
   apiOnline: {
     type: Boolean,
@@ -34,8 +42,14 @@ defineProps({
   isAutoMode: {
     type: Boolean,
     default: true
+  },
+  scanLogs: {
+    type: Array,
+    default: () => []
   }
 })
+
+defineEmits(['open-detail'])
 </script>
 
 <style scoped>
