@@ -497,14 +497,21 @@ const runPrediction = async () => {
       if (angleItems.value[idx]) {
         angleItems.value[idx].detectedClass = ang.detected_class
         angleItems.value[idx].confidence = ang.confidence
-        angleItems.value[idx].statusText = `${ang.detected_class.toUpperCase()} (${(ang.confidence * 100).toFixed(0)}%)`
+        const statusLabel = ang.detected_class === 'not_egg' 
+          ? 'BUKAN TELUR' 
+          : `${ang.detected_class.toUpperCase()} (${(ang.confidence * 100).toFixed(0)}%)`
+        angleItems.value[idx].statusText = statusLabel
         angleItems.value[idx].detections = ang.detections || []
 
         drawDetections(idx, selectedFiles.value[idx], ang.detections || [])
       }
     })
 
-    props.triggerToast('Analisis 360° & Audit SNI berhasil diselesaikan!')
+    if (data.is_egg === false || data.status === 'not_egg') {
+      props.triggerToast('⚠️ Peringatan: Objek pada citra bukan telur ayam valid.')
+    } else {
+      props.triggerToast('Analisis 360° & Audit SNI berhasil diselesaikan!')
+    }
   } catch (err) {
     console.error(err)
     props.triggerToast(`Gagal analisis: ${err.message || 'Server error'}`)
@@ -575,6 +582,7 @@ const getBorderClass = (cName) => {
   if (cName === 'cracked') return 'border-cracked'
   if (cName === 'dirt') return 'border-dirt'
   if (cName === 'good') return 'border-good'
+  if (cName === 'not_egg') return 'border-not-egg'
   return ''
 }
 
@@ -582,11 +590,13 @@ const getTagClass = (cName) => {
   if (cName === 'cracked') return 'tag-cracked'
   if (cName === 'dirt') return 'tag-dirt'
   if (cName === 'good') return 'tag-good'
+  if (cName === 'not_egg') return 'tag-not-egg'
   return 'tag-idle'
 }
 
 const heroGradeClass = computed(() => {
   const code = finalDecision.value?.grade_code
+  if (code === 'NOT_EGG') return 'hero-grade-not-egg'
   if (code === 'MUTU_I') return 'hero-grade-a'
   if (code === 'MUTU_II') return 'hero-grade-b'
   if (code === 'MUTU_III' || code === 'REJECT') return 'hero-grade-reject'
@@ -595,6 +605,7 @@ const heroGradeClass = computed(() => {
 
 const hugeBadgeClass = computed(() => {
   const code = finalDecision.value?.grade_code
+  if (code === 'NOT_EGG') return 'badge-not-egg'
   if (code === 'MUTU_I') return 'badge-a'
   if (code === 'MUTU_II') return 'badge-b'
   return 'badge-reject'
@@ -871,6 +882,12 @@ const hugeBadgeClass = computed(() => {
 .tag-good { background: #10b981; color: #fff; }
 .tag-dirt { background: #f59e0b; color: #fff; }
 .tag-cracked { background: #ef4444; color: #fff; }
+.tag-not-egg { background: #d97706; color: #fff; }
+
+.angle-card.border-not-egg {
+  border-color: #d97706;
+  box-shadow: 0 0 10px rgba(217, 119, 6, 0.3);
+}
 
 .angle-canvas-wrap {
   width: 100%;
@@ -971,6 +988,11 @@ const hugeBadgeClass = computed(() => {
   background: linear-gradient(135deg, var(--bg-card) 60%, rgba(239, 68, 68, 0.12));
 }
 
+.hero-grade-card.hero-grade-not-egg {
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, var(--bg-card) 60%, rgba(245, 158, 11, 0.15));
+}
+
 .action-pill {
   font-size: 0.8rem;
   font-weight: 800;
@@ -1017,6 +1039,12 @@ const hugeBadgeClass = computed(() => {
   background-color: rgba(239, 68, 68, 0.2);
   color: #ef4444;
   border: 2px solid #ef4444;
+}
+
+.badge-not-egg {
+  background-color: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+  border: 2px solid #f59e0b;
 }
 
 /* Dual Inspection Cards */

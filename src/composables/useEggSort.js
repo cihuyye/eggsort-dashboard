@@ -299,9 +299,15 @@ export function useEggSort() {
       const angles = res.angles || []
 
       // Mapping grade SNI ke label UI dashboard
+      const code = decision.grade_code || 'MUTU_I'
+
+      if (res.is_egg === false || code === 'NOT_EGG') {
+        triggerToast('⚠️ Peringatan: Objek pada citra tidak terdeteksi sebagai telur ayam valid.')
+        return res
+      }
+
       let mappedGrade = 'GRADE A'
       let mappedLabel = 'LAYAK KONSUMSI / PRIMA'
-      const code = decision.grade_code || 'MUTU_I'
 
       if (code === 'MUTU_I') {
         mappedGrade = 'GRADE A'
