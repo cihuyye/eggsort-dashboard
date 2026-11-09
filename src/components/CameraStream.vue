@@ -92,11 +92,11 @@
       <!-- Viewport Bottom Overlay Status Bar -->
       <div class="viewport-hud-bottom">
         <div class="hud-left">
-          <span class="hud-tag">Model: YOLOv8n-EggSort</span>
+          <span class="hud-tag">Model: YOLOv8-seg (Instance Segmentation)</span>
           <span class="hud-sep">•</span>
           <span class="hud-tag">Inf: {{ inferenceTime }}ms</span>
           <span class="hud-sep">•</span>
-          <span class="hud-tag">Pipeline: OpenCV CLAHE → YOLOv8</span>
+          <span class="hud-tag">Pipeline: OpenCV CLAHE → YOLOv8-seg</span>
         </div>
         <div class="hud-right">
           <span class="hud-tag lock-tag">
