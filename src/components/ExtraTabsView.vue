@@ -141,7 +141,7 @@
             <tbody>
               <!-- Group 1: Kerabang -->
               <tr class="group-header-row">
-                <td colspan="5"><strong>1. KONDISI KERABANG (SHELL)</strong> — Diinspeksi oleh Kamera AI Multi-Sudut &amp; YOLOv8</td>
+                <td colspan="5"><strong>1. KONDISI KERABANG (SHELL)</strong> — Diinspeksi oleh Kamera AI Multi-Sudut &amp; YOLOv8-seg</td>
               </tr>
               <tr>
                 <td><strong>a. Bentuk (Shape Index)</strong></td>
@@ -375,7 +375,7 @@
             </table>
 
             <div class="sni-note-box danger-note">
-              <span class="note-bold">⚠️ Bahaya Kerabang Retak:</span> Kerabang yang retak (cracked) menghilangkan lapisan proteksi kutikula, membuka celah masuk bagi <em>Salmonella</em> dan <em>Enterobacteriaceae</em> ke dalam cairan telur. Inilah dasar ilmiah mengapa YOLOv8 memprogram penolakan mutlak untuk setiap retakan.
+              <span class="note-bold">⚠️ Bahaya Kerabang Retak:</span> Kerabang yang retak (cracked) menghilangkan lapisan proteksi kutikula, membuka celah masuk bagi <em>Salmonella</em> dan <em>Enterobacteriaceae</em> ke dalam cairan telur. Inilah dasar ilmiah mengapa YOLOv8-seg memprogram penolakan mutlak untuk setiap retakan.
             </div>
           </div>
         </div>
@@ -443,7 +443,7 @@
             </thead>
             <tbody>
               <tr>
-                <td><strong>Model YOLOv8 Multi-Angle</strong></td>
+                <td><strong>Model YOLOv8-seg Multi-Angle</strong></td>
                 <td>Integritas cangkang 360° (good, dirt, cracked)</td>
                 <td>Pasal 5 Tabel 1 Poin 1.d (Keutuhan) &amp; 1.e (Kebersihan)</td>
                 <td>

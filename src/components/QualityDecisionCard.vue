@@ -10,7 +10,7 @@
           <line x1="16" y1="17" x2="8" y2="17" />
           <polyline points="10 9 9 9 8 9" />
         </svg>
-        <span class="card-title">Keputusan Mutu (YOLOv8 Engine)</span>
+        <span class="card-title">Keputusan Mutu (YOLOv8-seg Engine)</span>
       </div>
       <button class="btn-popup-head" @click="$emit('open-detail')" title="Buka Pop-up Detail">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -43,7 +43,7 @@
         <div class="score-meta">Confidence Score</div>
         <div class="score-value">{{ currentEgg.confidence }}%</div>
         <div class="yolo-prob-row">
-          <span>YOLOv8 Probability:</span>
+          <span>YOLOv8-seg Probability:</span>
           <strong>{{ currentEgg.yoloProbability }}</strong>
         </div>
       </div>
