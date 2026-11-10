@@ -151,12 +151,12 @@
     <!-- Camera Control Bar -->
     <div class="camera-controls">
       <div class="ctrl-buttons">
-        <!-- Tombol Unggah Citra Real untuk Uji API YOLOv8 & OpenCV -->
+        <!-- Tombol Unggah Citra Real untuk Uji API YOLOv8-seg & OpenCV -->
         <button
           class="cam-btn cam-btn-api"
           :disabled="apiLoading"
           @click="triggerFileInput"
-          title="Unggah foto telur asli untuk dianalisis langsung oleh model YOLOv8 & OpenCV"
+          title="Unggah foto telur asli untuk dianalisis langsung oleh model YOLOv8-seg & OpenCV"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -275,7 +275,7 @@ const onFileSelected = async (event) => {
   const files = event.target.files
   if (!files || !files.length) return
   if (props.scanRealEgg) {
-    props.triggerToast(`Mengirim ${files.length} citra ke server YOLOv8...`)
+    props.triggerToast(`Mengirim ${files.length} citra ke server YOLOv8-seg...`)
     const previewUrl = URL.createObjectURL(files[0])
     try {
       await props.scanRealEgg(Array.from(files), previewUrl)

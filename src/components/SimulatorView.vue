@@ -8,7 +8,7 @@
           <h2 class="sim-title">Kontrol Simulator Inspeksi Cangkang & Grading Telur</h2>
         </div>
         <p class="sim-sub">
-          Simulasi Multi-Angle YOLOv8 (Deteksi Cacat 360°) + OpenCV (Geometri & Bobot) + Google Gemini (Auditor Mutu SNI 3926:2023)
+          Simulasi Multi-Angle YOLOv8-seg (Segmentasi Cacat 360°) + OpenCV (Geometri & Bobot) + Google Gemini (Auditor Mutu SNI 3926:2023)
         </p>
       </div>
 
@@ -147,11 +147,11 @@
 
         <!-- Dual Inspection Grid (YOLO 360 + OpenCV Geometry) -->
         <div class="inspection-cards-grid">
-          <!-- Modul 1: YOLOv8 360 Evaluasi Cangkang -->
+          <!-- Modul 1: YOLOv8-seg 360 Evaluasi Cangkang -->
           <div class="sub-card">
             <div class="sub-card-header">
               <span class="mod-icon">🔍</span>
-              <span class="mod-title">YOLOv8 Evaluasi Cangkang 360°</span>
+              <span class="mod-title">YOLOv8-seg Evaluasi Cangkang 360°</span>
             </div>
             <div class="stat-list">
               <div class="stat-row">

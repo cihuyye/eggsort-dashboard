@@ -122,7 +122,7 @@ export function useEggSort() {
     criteria: [
       {
         title: 'Keutuhan & Kebersihan Kerabang',
-        desc: 'Cangkang utuh & bersih tanpa retak (YOLOv8 Score 0.01 < ambang 0.25 - SNI Tabel 1)',
+        desc: 'Cangkang utuh & bersih tanpa retak (YOLOv8-seg Score 0.01 < ambang 0.25 - SNI Tabel 1)',
         passed: true
       },
       {
@@ -279,7 +279,7 @@ export function useEggSort() {
   }
 
   // ============================================================================
-  // INTEGRASI API REALTIME (FASTAPI BACKEND YOLOv8 + OPENCV)
+  // INTEGRASI API REALTIME (FLASK BACKEND YOLOv8-seg + OPENCV)
   // ============================================================================
   const checkApiHealth = async () => {
     const res = await eggApiService.checkHealth()
@@ -380,7 +380,7 @@ export function useEggSort() {
         detections: detections,
         criteria: [
           {
-            title: 'Keutuhan Cangkang (YOLOv8)',
+            title: 'Keutuhan Cangkang (YOLOv8-seg)',
             desc: summary.notes || `Deteksi: ${dominantDefect.toUpperCase()} (${confScore}%)`,
             passed: dominantDefect === 'good'
           },

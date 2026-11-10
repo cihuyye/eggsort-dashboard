@@ -97,7 +97,7 @@
               <div class="info">
                 <div class="label">AI Confidence</div>
                 <div class="grade" :class="gradeClass">{{ eggData.gradeLabel || 'Mutu Prima' }}</div>
-                <div class="yolo">YOLOv8: {{ eggData.yoloProbability || 0.984 }}</div>
+                <div class="yolo">YOLOv8-seg: {{ eggData.yoloProbability || 0.984 }}</div>
               </div>
             </div>
 

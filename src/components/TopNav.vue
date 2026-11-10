@@ -12,7 +12,7 @@
       <div class="status-pill" :class="{ 'status-offline': !apiOnline }" :title="apiOnline ? 'Server AI Flask terhubung' : 'Server AI belum menyala di port 8000'">
         <span class="status-indicator" :style="{ backgroundColor: apiOnline ? '#10b981' : '#ef4444' }"></span>
         <span class="status-text">
-          {{ apiOnline ? 'YOLOv8 API ONLINE' : 'API OFFLINE (:8000)' }}
+          {{ apiOnline ? 'YOLOv8-seg API ONLINE' : 'API OFFLINE (:8000)' }}
         </span>
       </div>
 
