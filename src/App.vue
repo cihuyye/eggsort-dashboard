@@ -80,6 +80,7 @@
             :apiOnline="apiOnline"
             :apiLoading="apiLoading"
             :scanRealEgg="scanRealEgg"
+            :esp32Url="esp32Url"
             @open-detail="openEggDetail(currentEgg)"
           />
 
@@ -235,7 +236,8 @@ const {
   apiOnline,
   apiLoading,
   apiDevice,
-  scanRealEgg
+  scanRealEgg,
+  esp32Url
 } = useEggSort()
 
 // Pantau setiap perubahan tab untuk memastikan tampilan selalu kembali ke paling atas

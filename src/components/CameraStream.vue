@@ -16,6 +16,16 @@
         <span :class="apiOnline ? 'tag-api-online' : 'tag-api-offline'">
           API: {{ apiOnline ? 'ONLINE (Port 8000)' : 'OFFLINE' }}
         </span>
+        <!-- Status ESP32-CAM Stream -->
+        <span v-if="isRealStreamOn" class="tag-esp32-live">
+          <span class="tag-live-dot"></span>ESP32-CAM ONLINE // {{ fps }} FPS
+        </span>
+        <span v-else-if="streamConnecting" class="tag-esp32-connecting">
+          ESP32-CAM CONNECTING…
+        </span>
+        <span v-else class="tag-esp32-offline">
+          ESP32-CAM OFFLINE
+        </span>
         <span class="tag-metric">Lat: {{ latency }}ms</span>
         <span class="tag-metric">LED: {{ isLedOn ? 'ON' : 'OFF' }}</span>
       </div>
@@ -31,8 +41,35 @@
         <div class="roller r4"></div>
       </div>
 
-      <!-- Egg Target Visualizer -->
-      <div class="egg-stage" :class="streamMode" @click="$emit('open-detail')" title="Klik untuk membuka pop-up detail inspeksi" style="cursor: pointer;">
+      <!-- ═══ ESP32-CAM REAL LIVESTREAM ═══ -->
+      <!-- MJPEG polling layer — tampil di belakang HUD -->
+      <img
+        v-if="isRealStreamOn && liveFrameSrc"
+        :src="liveFrameSrc"
+        class="esp32-live-img"
+        alt="ESP32-CAM Live"
+        @error="handleStreamError"
+      />
+
+      <!-- Pesan koneksi / error stream -->
+      <div v-if="streamConnecting" class="stream-status-overlay">
+        <div class="stream-spinner"></div>
+        <span>Menghubungkan ke ESP32-CAM…</span>
+        <small>{{ esp32Url }}</small>
+      </div>
+      <div v-else-if="streamError && isRealStreamOn" class="stream-status-overlay stream-error">
+        <span>⚠️ Frame Drop — Menyambung ulang…</span>
+      </div>
+
+      <!-- Egg Target Visualizer (simulasi — disembunyikan saat real stream aktif) -->
+      <div
+        v-if="!isRealStreamOn"
+        class="egg-stage"
+        :class="streamMode"
+        @click="$emit('open-detail')"
+        title="Klik untuk membuka pop-up detail inspeksi"
+        style="cursor: pointer;"
+      >
         <!-- Candling Light Beam (Visible in candling mode) -->
         <div v-if="streamMode === 'candling'" class="candling-beam"></div>
 
@@ -48,7 +85,7 @@
             <span class="air-cell-label">Kantung Udara: {{ currentEgg.airDepthCm }}cm</span>
           </div>
           <div v-if="streamMode === 'candling'" class="yolk-shadow"></div>
-          
+
           <!-- Defect Mark (if cracked or dirt) -->
           <div v-if="currentEgg.yoloDefectClass === 'cracked'" class="defect-crack-mark">
             <svg viewBox="0 0 100 100" class="crack-svg">
@@ -57,29 +94,34 @@
           </div>
           <div v-if="currentEgg.yoloDefectClass === 'dirt'" class="defect-dirt-spot"></div>
         </div>
+      </div>
 
-        <!-- AI Bounding Box & HUD Reticle -->
-        <div class="bounding-box" :class="currentEgg.grade.toLowerCase().replace(' ', '-')">
-          <!-- Corner brackets -->
-          <span class="corner tl"></span>
-          <span class="corner tr"></span>
-          <span class="corner bl"></span>
-          <span class="corner br"></span>
+      <!-- AI Bounding Box & HUD Reticle — selalu tampil di atas stream/simulasi -->
+      <div
+        class="bounding-box"
+        :class="[currentEgg.grade.toLowerCase().replace(' ', '-'), { 'bounding-box-stream': isRealStreamOn }]"
+        @click="$emit('open-detail')"
+        style="cursor: pointer;"
+      >
+        <!-- Corner brackets -->
+        <span class="corner tl"></span>
+        <span class="corner tr"></span>
+        <span class="corner bl"></span>
+        <span class="corner br"></span>
 
-          <!-- Crosshairs -->
-          <div class="crosshair-h"></div>
-          <div class="crosshair-v"></div>
+        <!-- Crosshairs -->
+        <div class="crosshair-h"></div>
+        <div class="crosshair-v"></div>
 
-          <!-- Detection Tag -->
-          <div class="hud-label-top">
-            <span class="label-class">{{ currentEgg.yoloDefectClass === 'good' ? 'EGG-OBJECT' : currentEgg.yoloDefectClass.toUpperCase() }}</span>
-            <span class="label-conf">{{ currentEgg.confidence }}%</span>
-          </div>
+        <!-- Detection Tag -->
+        <div class="hud-label-top">
+          <span class="label-class">{{ currentEgg.yoloDefectClass === 'good' ? 'EGG-OBJECT' : currentEgg.yoloDefectClass.toUpperCase() }}</span>
+          <span class="label-conf">{{ currentEgg.confidence }}%</span>
+        </div>
 
-          <!-- Vertical scale bar -->
-          <div class="hud-scale-bar">
-            <span>58.2mm</span>
-          </div>
+        <!-- Vertical scale bar -->
+        <div class="hud-scale-bar">
+          <span>58.2mm</span>
         </div>
       </div>
 
@@ -132,6 +174,29 @@
           @change="onFileSelected"
         />
 
+        <!-- ═══ Tombol ESP32-CAM LIVESTREAM ═══ -->
+        <button
+          class="cam-btn"
+          :class="{
+            'cam-btn-esp32-on':  isRealStreamOn,
+            'cam-btn-esp32-off': !isRealStreamOn && !streamConnecting,
+            'cam-btn-esp32-connecting': streamConnecting
+          }"
+          @click="toggleEsp32Stream"
+          :title="isRealStreamOn ? `Hentikan stream ESP32-CAM (${esp32Url})` : `Hubungkan ke ESP32-CAM (${esp32Url})`"
+        >
+          <!-- Ikon kamera ESP32 -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 7l-7 5 7 5V7z"/>
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+          </svg>
+          <span v-if="streamConnecting">Menghubungkan…</span>
+          <span v-else-if="isRealStreamOn">🔴 LIVE – Hentikan Stream</span>
+          <span v-else>📹 Hubungkan ESP32-CAM</span>
+          <!-- Dot indikator live -->
+          <span v-if="isRealStreamOn" class="live-dot"></span>
+        </button>
+
         <button class="cam-btn" @click="takeSnapshot" title="Ambil cuplikan gambar saat ini">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
@@ -173,15 +238,16 @@
 
       <div class="camera-id-text">
         Camera ID: <code>ESP32-CAM-01A</code>
+        <span v-if="isRealStreamOn" class="esp32-ip-badge">{{ esp32Url }}</span>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
-defineEmits(['open-detail'])
+const emit = defineEmits(['open-detail'])
 const props = defineProps({
   fps: { type: [Number, String], default: 29.8 },
   latency: { type: [Number, String], default: 14 },
@@ -195,21 +261,19 @@ const props = defineProps({
   triggerToast: { type: Function, required: true },
   apiOnline: { type: Boolean, default: false },
   apiLoading: { type: Boolean, default: false },
-  scanRealEgg: { type: Function, default: null }
+  scanRealEgg: { type: Function, default: null },
+  // ── ESP32-CAM Live Stream ──
+  esp32Url: { type: String, default: 'http://192.168.1.13' }
 })
 
+// ── File upload (uji API YOLOv8) ──
 const fileInputRef = ref(null)
-
 const triggerFileInput = () => {
-  if (fileInputRef.value) {
-    fileInputRef.value.click()
-  }
+  if (fileInputRef.value) fileInputRef.value.click()
 }
-
 const onFileSelected = async (event) => {
   const files = event.target.files
   if (!files || !files.length) return
-
   if (props.scanRealEgg) {
     props.triggerToast(`Mengirim ${files.length} citra ke server YOLOv8...`)
     const previewUrl = URL.createObjectURL(files[0])
@@ -221,10 +285,63 @@ const onFileSelected = async (event) => {
   } else {
     props.triggerToast('Fungsi scan API belum terhubung.')
   }
-
-  // Reset input agar bisa pilih file yang sama berulang kali
   event.target.value = ''
 }
+
+// ── ESP32-CAM Live Stream State ──
+const isRealStreamOn  = ref(false)
+const liveFrameSrc    = ref('')
+const streamError     = ref(false)
+const streamConnecting = ref(false)
+let   streamInterval  = null
+
+/** Mulai polling JPEG dari ESP32-CAM setiap 150 ms */
+const startEsp32Stream = () => {
+  if (streamInterval) return
+  streamConnecting.value = true
+  streamError.value      = false
+
+  // Frame pertama — test koneksi
+  const testImg = new Image()
+  testImg.onload = () => {
+    streamConnecting.value = false
+    isRealStreamOn.value   = true
+    props.triggerToast(`📹 ESP32-CAM terhubung: ${props.esp32Url}`)
+    streamInterval = setInterval(() => {
+      liveFrameSrc.value = `${props.esp32Url}/capture?_cb=${Date.now()}`
+    }, 150)
+  }
+  testImg.onerror = () => {
+    streamConnecting.value = false
+    streamError.value      = true
+    props.triggerToast(`⚠️ Gagal terhubung ke ESP32-CAM (${props.esp32Url})`)
+  }
+  testImg.src = `${props.esp32Url}/capture?_cb=${Date.now()}`
+}
+
+/** Hentikan stream */
+const stopEsp32Stream = () => {
+  if (streamInterval) { clearInterval(streamInterval); streamInterval = null }
+  isRealStreamOn.value = false
+  liveFrameSrc.value   = ''
+  streamError.value    = false
+  props.triggerToast('📹 ESP32-CAM stream dihentikan.')
+}
+
+const toggleEsp32Stream = () => {
+  if (isRealStreamOn.value || streamConnecting.value) stopEsp32Stream()
+  else startEsp32Stream()
+}
+
+const handleStreamError = () => {
+  // Frame error sementara — jangan langsung matikan, coba lagi di interval berikutnya
+  streamError.value = true
+  setTimeout(() => { streamError.value = false }, 2000)
+}
+
+onUnmounted(() => {
+  if (streamInterval) clearInterval(streamInterval)
+})
 </script>
 
 <style scoped>
@@ -307,6 +424,47 @@ const onFileSelected = async (event) => {
   padding: 2px 8px;
   border-radius: 4px;
   font-weight: 700;
+}
+
+/* ── ESP32-CAM telemetry tags ── */
+.tag-esp32-live {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #34d399;
+  background-color: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.tag-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 5px #34d399;
+  animation: blink-dot 1s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.tag-esp32-connecting {
+  color: #fbbf24;
+  background-color: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  animation: pulse-connecting 1s ease-in-out infinite;
+}
+
+.tag-esp32-offline {
+  color: #64748b;
+  background-color: rgba(100, 116, 139, 0.1);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  padding: 2px 8px;
+  border-radius: 4px;
 }
 
 .real-egg-wrapper {
@@ -497,6 +655,132 @@ const onFileSelected = async (event) => {
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
 }
 
+/* ═══ ESP32-CAM REAL STREAM STYLES ═══ */
+
+/* Gambar JPEG dari ESP32 yang mengisi penuh viewport */
+.esp32-live-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 6;
+  image-rendering: auto;
+}
+
+/* Overlay saat koneksi / error */
+.stream-status-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(10, 15, 26, 0.75);
+  backdrop-filter: blur(4px);
+  color: #94a3b8;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+.stream-status-overlay small {
+  font-size: 0.65rem;
+  color: #475569;
+}
+
+.stream-error {
+  color: #f87171;
+}
+
+/* Spinner animasi saat connecting */
+.stream-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(16, 185, 129, 0.2);
+  border-top-color: #10b981;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Tombol ESP32 — state OFF */
+.cam-btn-esp32-off {
+  background-color: rgba(99, 102, 241, 0.1) !important;
+  border-color: rgba(99, 102, 241, 0.4) !important;
+  color: #818cf8 !important;
+}
+.cam-btn-esp32-off svg {
+  color: #818cf8 !important;
+}
+.cam-btn-esp32-off:hover {
+  background-color: rgba(99, 102, 241, 0.2) !important;
+}
+
+/* Tombol ESP32 — state LIVE ON */
+.cam-btn-esp32-on {
+  background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+  border-color: #ef4444 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.35);
+}
+.cam-btn-esp32-on svg {
+  color: #ffffff !important;
+}
+
+/* Tombol ESP32 — state CONNECTING */
+.cam-btn-esp32-connecting {
+  background-color: rgba(234, 179, 8, 0.12) !important;
+  border-color: rgba(234, 179, 8, 0.4) !important;
+  color: #fbbf24 !important;
+  animation: pulse-connecting 1s ease-in-out infinite;
+}
+.cam-btn-esp32-connecting svg {
+  color: #fbbf24 !important;
+}
+@keyframes pulse-connecting {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+/* Dot merah berkedip saat LIVE */
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ff4757;
+  box-shadow: 0 0 6px #ff4757;
+  animation: blink-dot 1s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes blink-dot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.2; }
+}
+
+/* Badge IP di bawah camera-id */
+.esp32-ip-badge {
+  margin-left: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* Bounding Box — saat real stream: posisi absolute langsung di viewport (z-index tinggi) */
+.bounding-box-stream {
+  z-index: 25 !important;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
 /* Bounding Box HUD */
 .bounding-box {
   position: absolute;
@@ -505,6 +789,7 @@ const onFileSelected = async (event) => {
   border: 1px solid rgba(16, 185, 129, 0.4);
   pointer-events: none;
   transition: all 0.3s ease;
+  z-index: 15;
 }
 
 .bounding-box.grade-a {

@@ -40,6 +40,9 @@ export function useEggSort() {
   const apiLoading = ref(false)
   const apiUrl = ref(eggApiService.getBaseUrl())
 
+  // ESP32-CAM URL — ganti sesuai IP perangkat di jaringan lokal
+  const esp32Url = ref('http://192.168.1.13')
+
   const triggerToast = (msg) => {
     toastMessage.value = msg
     showToast.value = true
@@ -656,6 +659,8 @@ export function useEggSort() {
     apiLoading,
     apiUrl,
     scanRealEgg,
-    checkApiHealth
+    checkApiHealth,
+    // ESP32-CAM
+    esp32Url
   }
 }
