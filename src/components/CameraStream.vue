@@ -27,218 +27,271 @@
           ESP32-CAM OFFLINE
         </span>
         <span class="tag-metric">Lat: {{ latency }}ms</span>
-        <span class="tag-metric">LED: {{ isLedOn ? 'ON' : 'OFF' }}</span>
+        <span class="tag-metric" :class="{ 'tag-metric-highlight': isEspLedOn }">
+          LED: {{ (isRealStreamOn ? isEspLedOn : isLedOn) ? 'ON' : 'OFF' }}
+        </span>
       </div>
     </div>
 
-    <!-- Live Viewport Area -->
-    <div class="viewport-wrapper" :class="{ 'snapshot-flash': isSnapshotting }">
-      <!-- Conveyor Roller Background Simulation -->
-      <div class="conveyor-rollers">
-        <div class="roller r1"></div>
-        <div class="roller r2"></div>
-        <div class="roller r3"></div>
-        <div class="roller r4"></div>
-      </div>
-
-      <!-- ═══ ESP32-CAM REAL LIVESTREAM ═══ -->
-      <!-- MJPEG polling layer — tampil di belakang HUD -->
-      <img
-        v-if="isRealStreamOn && liveFrameSrc"
-        :src="liveFrameSrc"
-        class="esp32-live-img"
-        alt="ESP32-CAM Live"
-        @error="handleStreamError"
-      />
-
-      <!-- Pesan koneksi / error stream -->
-      <div v-if="streamConnecting" class="stream-status-overlay">
-        <div class="stream-spinner"></div>
-        <span>Menghubungkan ke ESP32-CAM…</span>
-        <small>{{ esp32Url }}</small>
-      </div>
-      <div v-else-if="streamError && isRealStreamOn" class="stream-status-overlay stream-error">
-        <span>⚠️ Frame Drop — Menyambung ulang…</span>
-      </div>
-
-      <!-- Egg Target Visualizer (simulasi — disembunyikan saat real stream aktif) -->
-      <div
-        v-if="!isRealStreamOn"
-        class="egg-stage"
-        :class="streamMode"
-        @click="$emit('open-detail')"
-        title="Klik untuk membuka pop-up detail inspeksi"
-        style="cursor: pointer;"
-      >
-        <!-- Candling Light Beam (Visible in candling mode) -->
-        <div v-if="streamMode === 'candling'" class="candling-beam"></div>
-
-        <!-- Real Image Preview (jika ada gambar dari API) -->
-        <div v-if="currentEgg.imageUrl" class="real-egg-wrapper">
-          <img :src="currentEgg.imageUrl" class="real-egg-img" alt="Citra Telur Terdeteksi" />
+    <!-- Main Camera Content Layout: Left Viewport (4:3) & Right Control Panel -->
+    <div class="camera-body-grid">
+      <!-- Left: Real Camera Viewport (Aspek Rasio Rill 4:3) -->
+      <div class="viewport-wrapper" :class="{ 'snapshot-flash': isSnapshotting }">
+        <!-- Conveyor Roller Background Simulation -->
+        <div class="conveyor-rollers">
+          <div class="roller r1"></div>
+          <div class="roller r2"></div>
+          <div class="roller r3"></div>
+          <div class="roller r4"></div>
         </div>
 
-        <!-- Egg Silhouette & Texture (Simulasi Bawaan) -->
-        <div v-else class="egg-model" :class="[streamMode, currentEgg.grade.toLowerCase().replace(' ', '-')]">
-          <!-- Candling Interior Features -->
-          <div v-if="streamMode === 'candling'" class="air-cell-visual" :style="{ height: `${Math.min(36, currentEgg.airDepthCm * 30)}px` }">
-            <span class="air-cell-label">Kantung Udara: {{ currentEgg.airDepthCm }}cm</span>
-          </div>
-          <div v-if="streamMode === 'candling'" class="yolk-shadow"></div>
-
-          <!-- Defect Mark (if cracked or dirt) -->
-          <div v-if="currentEgg.yoloDefectClass === 'cracked'" class="defect-crack-mark">
-            <svg viewBox="0 0 100 100" class="crack-svg">
-              <path d="M45,20 L52,40 L44,55 L58,75 L49,90" stroke="#ff4757" stroke-width="2.5" fill="none" stroke-linecap="round" />
-            </svg>
-          </div>
-          <div v-if="currentEgg.yoloDefectClass === 'dirt'" class="defect-dirt-spot"></div>
-        </div>
-      </div>
-
-      <!-- AI Bounding Box & HUD Reticle — selalu tampil di atas stream/simulasi -->
-      <div
-        class="bounding-box"
-        :class="[currentEgg.grade.toLowerCase().replace(' ', '-'), { 'bounding-box-stream': isRealStreamOn }]"
-        @click="$emit('open-detail')"
-        style="cursor: pointer;"
-      >
-        <!-- Corner brackets -->
-        <span class="corner tl"></span>
-        <span class="corner tr"></span>
-        <span class="corner bl"></span>
-        <span class="corner br"></span>
-
-        <!-- Crosshairs -->
-        <div class="crosshair-h"></div>
-        <div class="crosshair-v"></div>
-
-        <!-- Detection Tag -->
-        <div class="hud-label-top">
-          <span class="label-class">{{ currentEgg.yoloDefectClass === 'good' ? 'EGG-OBJECT' : currentEgg.yoloDefectClass.toUpperCase() }}</span>
-          <span class="label-conf">{{ currentEgg.confidence }}%</span>
-        </div>
-
-        <!-- Vertical scale bar -->
-        <div class="hud-scale-bar">
-          <span>58.2mm</span>
-        </div>
-      </div>
-
-      <!-- Scanline Laser Effect -->
-      <div class="scanline-effect"></div>
-
-      <!-- Dark Chamber Vignette -->
-      <div class="chamber-vignette"></div>
-
-      <!-- Viewport Bottom Overlay Status Bar -->
-      <div class="viewport-hud-bottom">
-        <div class="hud-left">
-          <span class="hud-tag">Model: YOLOv8-seg (Instance Segmentation)</span>
-          <span class="hud-sep">•</span>
-          <span class="hud-tag">Inf: {{ inferenceTime }}ms</span>
-          <span class="hud-sep">•</span>
-          <span class="hud-tag">Pipeline: OpenCV CLAHE → YOLOv8-seg</span>
-        </div>
-        <div class="hud-right">
-          <span class="hud-tag lock-tag">
-            <span class="hud-lock-dot"></span> Auto-Focus Lock (F/2.2)
-          </span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Camera Control Bar -->
-    <div class="camera-controls">
-      <div class="ctrl-buttons">
-        <!-- Tombol Unggah Citra Real untuk Uji API YOLOv8-seg & OpenCV -->
-        <button
-          class="cam-btn cam-btn-api"
-          :disabled="apiLoading"
-          @click="triggerFileInput"
-          title="Unggah foto telur asli untuk dianalisis langsung oleh model YOLOv8-seg & OpenCV"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="17 8 12 3 7 8" />
-            <line x1="12" y1="3" x2="12" y2="15" />
-          </svg>
-          <span>{{ apiLoading ? 'Memproses API...' : '⚡ Uji Citra Real (API)' }}</span>
-        </button>
-        <input
-          type="file"
-          ref="fileInputRef"
-          accept="image/*"
-          multiple
-          style="display: none;"
-          @change="onFileSelected"
+        <!-- ═══ ESP32-CAM REAL LIVESTREAM (4:3 Rill) ═══ -->
+        <img
+          v-if="isRealStreamOn && liveFrameSrc"
+          :src="liveFrameSrc"
+          class="esp32-live-img"
+          alt="ESP32-CAM Live"
+          @load="onFrameLoaded"
+          @error="handleStreamError"
         />
 
-        <!-- ═══ Tombol ESP32-CAM LIVESTREAM ═══ -->
-        <button
-          class="cam-btn"
-          :class="{
-            'cam-btn-esp32-on':  isRealStreamOn,
-            'cam-btn-esp32-off': !isRealStreamOn && !streamConnecting,
-            'cam-btn-esp32-connecting': streamConnecting
-          }"
-          @click="toggleEsp32Stream"
-          :title="isRealStreamOn ? `Hentikan stream ESP32-CAM (${esp32Url})` : `Hubungkan ke ESP32-CAM (${esp32Url})`"
+        <!-- Pesan koneksi / error stream -->
+        <div v-if="streamConnecting" class="stream-status-overlay">
+          <div class="stream-spinner"></div>
+          <span>Menghubungkan ke ESP32-CAM…</span>
+          <small>{{ currentEsp32Url }}</small>
+        </div>
+        <div v-else-if="streamError && isRealStreamOn" class="stream-status-overlay stream-error">
+          <span>⚠️ Frame Drop / Terputus — Menyambung ulang ke {{ currentEsp32Url }}…</span>
+        </div>
+
+        <!-- Egg Target Visualizer (tampil jika real stream tidak aktif ATAU frame belum siap) -->
+        <div
+          v-if="!isRealStreamOn || (!hasReceivedFrame && !streamConnecting)"
+          class="egg-stage"
+          :class="streamMode"
+          @click="$emit('open-detail')"
+          title="Klik untuk membuka pop-up detail inspeksi"
+          style="cursor: pointer;"
         >
-          <!-- Ikon kamera ESP32 -->
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M23 7l-7 5 7 5V7z"/>
-            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-          </svg>
-          <span v-if="streamConnecting">Menghubungkan…</span>
-          <span v-else-if="isRealStreamOn">🔴 LIVE – Hentikan Stream</span>
-          <span v-else>📹 Hubungkan ESP32-CAM</span>
-          <!-- Dot indikator live -->
-          <span v-if="isRealStreamOn" class="live-dot"></span>
-        </button>
+          <!-- Candling Light Beam (Visible in candling mode) -->
+          <div v-if="streamMode === 'candling'" class="candling-beam"></div>
 
-        <button class="cam-btn" @click="takeSnapshot" title="Ambil cuplikan gambar saat ini">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-            <circle cx="12" cy="13" r="4" />
-          </svg>
-          <span>Snapshot Manual</span>
-        </button>
+          <!-- Real Image Preview (jika ada gambar dari API) -->
+          <div v-if="currentEgg.imageUrl" class="real-egg-wrapper">
+            <img :src="currentEgg.imageUrl" class="real-egg-img" alt="Citra Telur Terdeteksi" />
+          </div>
 
-        <button class="cam-btn mode-switch-btn" @click="toggleStreamMode" :title="`Beralih ke mode ${streamMode === 'top' ? 'Candling' : 'Top-Light'}`">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="5" />
-            <line x1="12" y1="1" x2="12" y2="3" />
-            <line x1="12" y1="21" x2="12" y2="23" />
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-            <line x1="1" y1="12" x2="3" y2="12" />
-            <line x1="21" y1="12" x2="23" y2="12" />
-          </svg>
-          <span>Stream: {{ streamMode === 'top' ? 'Top-Light (Cangkang)' : 'Candling (Interior)' }}</span>
-        </button>
+          
+          <!-- Egg Silhouette & Texture (Simulasi Bawaan) -->
+          <div v-else class="egg-model" :class="[streamMode, currentEgg.grade.toLowerCase().replace(' ', '-')]">
+            <!-- Candling Interior Features -->
+            <div v-if="streamMode === 'candling'" class="air-cell-visual" :style="{ height: `${Math.min(36, currentEgg.airDepthCm * 30)}px` }">
+              <span class="air-cell-label">Kantung Udara: {{ currentEgg.airDepthCm }}cm</span>
+            </div>
+            <div v-if="streamMode === 'candling'" class="yolk-shadow"></div>
 
-        <button class="cam-btn cam-btn-inspect" @click="$emit('open-detail')" title="Buka Pop-up Detail Telur Terdeteksi">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            <line x1="11" y1="8" x2="11" y2="14" />
-            <line x1="8" y1="11" x2="14" y2="11" />
-          </svg>
-          <span>Detail Telur</span>
-        </button>
+            <!-- Defect Mark (if cracked or dirt) -->
+            <div v-if="currentEgg.yoloDefectClass === 'cracked'" class="defect-crack-mark">
+              <svg viewBox="0 0 100 100" class="crack-svg">
+                <path d="M45,20 L52,40 L44,55 L58,75 L49,90" stroke="#ff4757" stroke-width="2.5" fill="none" stroke-linecap="round" />
+              </svg>
+            </div>
+            <div v-if="currentEgg.yoloDefectClass === 'dirt'" class="defect-dirt-spot"></div>
+          </div>
+        </div>
 
-        <button class="cam-btn" @click="triggerToast('Kalibrasi titik fokus lensa selesai (F/2.2 - locked)')" title="Kalibrasi auto-fokus dan exposure">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
-          </svg>
-          <span>Kalibrasi Titik Fokus</span>
-        </button>
+        <!-- AI Bounding Box & HUD Reticle — selalu tampil di atas stream/simulasi -->
+        <div
+          class="bounding-box"
+          :class="[currentEgg.grade.toLowerCase().replace(' ', '-'), { 'bounding-box-stream': isRealStreamOn }]"
+          @click="$emit('open-detail')"
+          style="cursor: pointer;"
+        >
+          <!-- Corner brackets -->
+          <span class="corner tl"></span>
+          <span class="corner tr"></span>
+          <span class="corner bl"></span>
+          <span class="corner br"></span>
+
+          <!-- Crosshairs -->
+          <div class="crosshair-h"></div>
+          <div class="crosshair-v"></div>
+
+          <!-- Detection Tag -->
+          <div class="hud-label-top">
+            <span class="label-class">{{ currentEgg.yoloDefectClass === 'good' ? 'EGG-OBJECT' : currentEgg.yoloDefectClass.toUpperCase() }}</span>
+            <span class="label-conf">{{ currentEgg.confidence }}%</span>
+          </div>
+
+          <!-- Vertical scale bar -->
+          <div class="hud-scale-bar">
+            <span>58.2mm</span>
+          </div>
+        </div>
+
+        <!-- Scanline Laser Effect -->
+        <div class="scanline-effect"></div>
+
+        <!-- Dark Chamber Vignette -->
+        <div class="chamber-vignette"></div>
+
+        <!-- Viewport Bottom Overlay Status Bar -->
+        <div class="viewport-hud-bottom">
+          <div class="hud-left">
+            <span class="hud-tag">Model: YOLOv8-seg</span>
+            <span class="hud-sep">•</span>
+            <span class="hud-tag">Inf: {{ inferenceTime }}ms</span>
+            <span class="hud-sep">•</span>
+            <span class="hud-tag">Pipeline: CLAHE → YOLOv8</span>
+          </div>
+          <div class="hud-right">
+            <span class="hud-tag lock-tag">
+              <span class="hud-lock-dot"></span> Auto-Focus (F/2.2)
+            </span>
+          </div>
+        </div>
       </div>
 
-      <div class="camera-id-text">
-        Camera ID: <code>ESP32-CAM-01A</code>
-        <span v-if="isRealStreamOn" class="esp32-ip-badge">{{ esp32Url }}</span>
+      <!-- Right: Side Action Controls Panel -->
+      <div class="camera-side-panel">
+        <div class="side-panel-header">
+          <span class="side-title">Kontrol Kamera & AI</span>
+          <span
+            class="esp32-ip-badge"
+            @click="updateEsp32Url"
+            title="Klik untuk mengubah URL/IP ESP32-CAM"
+            style="cursor: pointer;"
+          >
+            {{ currentEsp32Url }} ✎
+          </span>
+        </div>
+
+        <div class="side-panel-buttons">
+          <!-- ═══ Tombol ESP32-CAM LIVESTREAM ═══ -->
+          <button
+            class="cam-btn side-btn"
+            :class="{
+              'cam-btn-esp32-on':  isRealStreamOn,
+              'cam-btn-esp32-off': !isRealStreamOn && !streamConnecting,
+              'cam-btn-esp32-connecting': streamConnecting
+            }"
+            @click="toggleEsp32Stream"
+            :title="isRealStreamOn ? `Hentikan stream ESP32-CAM (${currentEsp32Url})` : `Hubungkan ke ESP32-CAM (${currentEsp32Url})`"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 7l-7 5 7 5V7z"/>
+              <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+            </svg>
+            <span v-if="streamConnecting">Menghubungkan…</span>
+            <span v-else-if="isRealStreamOn">🔴 LIVE – Hentikan</span>
+            <span v-else>📹 Hubungkan Stream</span>
+            <span v-if="isRealStreamOn" class="live-dot"></span>
+          </button>
+
+          <!-- ═══ Tombol KONTROL LAMPU FLASH ESP32-CAM (GPIO 4) ═══ -->
+          <button
+            v-if="isRealStreamOn"
+            class="cam-btn side-btn"
+            :class="{ 'cam-btn-led-on': isEspLedOn, 'cam-btn-led-off': !isEspLedOn }"
+            @click="toggleEspLed"
+            :title="isEspLedOn ? 'Matikan Lampu Flash LED (GPIO 4)' : 'Nyalakan Lampu Flash LED (GPIO 4)'"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2v1m0 18v1M4.22 4.22l.71.71m14.14 14.14l.71.71M1 12h1m18 0h1M4.22 19.78l.71-.71m14.14-14.14l.71-.71M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/>
+            </svg>
+            <span>{{ isEspLedOn ? '💡 Flash LED: ON' : '💡 Flash LED: OFF' }}</span>
+          </button>
+
+          <!-- ═══ Tombol AUTO AI INSPECT (YOLOv8 + OpenCV) ═══ -->
+          <button
+            v-if="isRealStreamOn"
+            class="cam-btn side-btn"
+            :class="{ 'cam-btn-ai-active': isAutoAiActive, 'cam-btn-ai-inactive': !isAutoAiActive }"
+            @click="toggleAutoAi"
+            :title="isAutoAiActive ? 'Hentikan inspeksi AI otomatis berkala' : 'Aktifkan inspeksi YOLOv8 otomatis dari frame ESP32'"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
+            </svg>
+            <span>{{ isAutoAiActive ? '🤖 Auto AI (Aktif)' : '🤖 Auto AI (Mati)' }}</span>
+            <span v-if="isInferencing" class="infer-spinner"></span>
+          </button>
+
+          <!-- ═══ Tombol SCAN SATU FRAME INI ═══ -->
+          <button
+            v-if="isRealStreamOn"
+            class="cam-btn side-btn"
+            :disabled="isInferencing"
+            @click="inspectCurrentFrame"
+            title="Ambil frame saat ini dan kirim ke YOLOv8 untuk grading langsung"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            <span>{{ isInferencing ? 'Menganalisis...' : '🎯 Scan Frame Ini' }}</span>
+          </button>
+
+          <!-- Tombol Unggah Citra Real untuk Uji API YOLOv8-seg & OpenCV -->
+          <button
+            class="cam-btn side-btn cam-btn-api"
+            :disabled="apiLoading"
+            @click="triggerFileInput"
+            title="Unggah foto telur asli untuk dianalisis langsung oleh model YOLOv8-seg & OpenCV"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            <span>{{ apiLoading ? 'Memproses API...' : '⚡ Uji Citra Real (API)' }}</span>
+          </button>
+          <input
+            type="file"
+            ref="fileInputRef"
+            accept="image/*"
+            multiple
+            style="display: none;"
+            @change="onFileSelected"
+          />
+
+          <button class="cam-btn side-btn" @click="takeSnapshot" title="Ambil cuplikan gambar saat ini">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+            <span>Snapshot Manual</span>
+          </button>
+
+          <button class="cam-btn side-btn mode-switch-btn" @click="toggleStreamMode" :title="`Beralih ke mode ${streamMode === 'top' ? 'Candling' : 'Top-Light'}`">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="5" />
+              <line x1="12" y1="1" x2="12" y2="3" />
+              <line x1="12" y1="21" x2="12" y2="23" />
+            </svg>
+            <span>Stream: {{ streamMode === 'top' ? 'Top-Light' : 'Candling' }}</span>
+          </button>
+
+          <button class="cam-btn side-btn cam-btn-inspect" @click="$emit('open-detail')" title="Buka Pop-up Detail Telur Terdeteksi">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <span>Detail Telur</span>
+          </button>
+
+          <button class="cam-btn side-btn" @click="triggerToast('Kalibrasi titik fokus lensa selesai (F/2.2 - locked)')" title="Kalibrasi auto-fokus dan exposure">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+            </svg>
+            <span>Kalibrasi Fokus</span>
+          </button>
+        </div>
+
+        <div class="side-panel-footer">
+          <span>Camera ID: <code>ESP32-CAM-01A</code></span>
+        </div>
       </div>
     </div>
   </div>
@@ -263,7 +316,7 @@ const props = defineProps({
   apiLoading: { type: Boolean, default: false },
   scanRealEgg: { type: Function, default: null },
   // ── ESP32-CAM Live Stream ──
-  esp32Url: { type: String, default: 'http://192.168.1.13' }
+  esp32Url: { type: String, default: 'http://192.168.18.141' }
 })
 
 // ── File upload (uji API YOLOv8) ──
@@ -289,40 +342,146 @@ const onFileSelected = async (event) => {
 }
 
 // ── ESP32-CAM Live Stream State ──
+const currentEsp32Url = ref(localStorage.getItem('eggsort_esp32_url') || props.esp32Url || 'http://192.168.1.13')
 const isRealStreamOn  = ref(false)
+const hasReceivedFrame = ref(false)
 const liveFrameSrc    = ref('')
 const streamError     = ref(false)
 const streamConnecting = ref(false)
+const isEspLedOn      = ref(false)
 let   streamInterval  = null
+
+const onFrameLoaded = () => {
+  hasReceivedFrame.value = true
+  streamError.value = false
+}
+
+const toggleEspLed = async () => {
+  try {
+    const nextState = !isEspLedOn.value
+    const res = await fetch(`${currentEsp32Url.value}/led?status=${nextState ? '1' : '0'}`)
+    if (res.ok) {
+      isEspLedOn.value = nextState
+      props.triggerToast(`💡 Lampu Flash ESP32: ${isEspLedOn.value ? 'ON' : 'OFF'}`)
+    } else {
+      throw new Error(`HTTP ${res.status}`)
+    }
+  } catch (err) {
+    console.warn('[ESP32 LED Error]:', err)
+    props.triggerToast(`⚠️ Gagal mengubah status LED Flash (${err.message})`)
+  }
+}
+
+const updateEsp32Url = () => {
+  const newUrl = prompt('Masukkan URL / IP ESP32-CAM:', currentEsp32Url.value)
+  if (newUrl && newUrl.trim()) {
+    currentEsp32Url.value = newUrl.trim()
+    localStorage.setItem('eggsort_esp32_url', currentEsp32Url.value)
+    props.triggerToast(`IP ESP32 diubah ke: ${currentEsp32Url.value}`)
+    if (isRealStreamOn.value) {
+      stopEsp32Stream()
+      startEsp32Stream()
+    }
+  }
+}
+
+// ── Realtime Auto AI Inspection State ──
+const isAutoAiActive = ref(false)
+const isInferencing = ref(false)
+let   autoAiTimer   = null
+
+/** Ambil 1 frame dari ESP32 lalu kirim ke YOLOv8-seg API */
+const inspectCurrentFrame = async () => {
+  if (isInferencing.value || !props.scanRealEgg) return
+  
+  try {
+    isInferencing.value = true
+    const captureUrl = `${currentEsp32Url.value}/capture?_cb=${Date.now()}`
+    
+    // Fetch blob citra langsung dari ESP32
+    const res = await fetch(captureUrl, { cache: 'no-store' })
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`)
+    const blob = await res.blob()
+    
+    const file = new File([blob], `esp32_egg_${Date.now()}.jpg`, { type: 'image/jpeg' })
+    const previewUrl = URL.createObjectURL(blob)
+    
+    await props.scanRealEgg([file], previewUrl)
+  } catch (err) {
+    console.warn('[Auto AI Inspect Error]:', err)
+  } finally {
+    isInferencing.value = false
+  }
+}
+
+/** Toggle mode Auto AI Inspect */
+const toggleAutoAi = () => {
+  if (!props.apiOnline) {
+    props.triggerToast('⚠️ Backend Flask (Port 8000) belum ONLINE!')
+    return
+  }
+
+  isAutoAiActive.value = !isAutoAiActive.value
+  
+  if (isAutoAiActive.value) {
+    if (!isRealStreamOn.value) {
+      startEsp32Stream()
+    }
+    props.triggerToast('🤖 Auto AI Inspect DIAKTIFKAN (Inferensi berkala)')
+    // Jalankan pertama kali langsung
+    inspectCurrentFrame()
+    // Ulangi setiap 1800ms agar ESP32-CAM Non-PSRAM & GPU/CPU tetap stabil & dingin
+    autoAiTimer = setInterval(() => {
+      if (isRealStreamOn.value && !isInferencing.value) {
+        inspectCurrentFrame()
+      }
+    }, 1800)
+  } else {
+    if (autoAiTimer) {
+      clearInterval(autoAiTimer)
+      autoAiTimer = null
+    }
+    props.triggerToast('Auto AI Inspect DINONAKTIFKAN')
+  }
+}
 
 /** Mulai polling JPEG dari ESP32-CAM setiap 150 ms */
 const startEsp32Stream = () => {
   if (streamInterval) return
   streamConnecting.value = true
   streamError.value      = false
+  hasReceivedFrame.value = false
 
   // Frame pertama — test koneksi
   const testImg = new Image()
   testImg.onload = () => {
     streamConnecting.value = false
     isRealStreamOn.value   = true
-    props.triggerToast(`📹 ESP32-CAM terhubung: ${props.esp32Url}`)
+    hasReceivedFrame.value = true
+    props.triggerToast(`📹 ESP32-CAM terhubung: ${currentEsp32Url.value}`)
     streamInterval = setInterval(() => {
-      liveFrameSrc.value = `${props.esp32Url}/capture?_cb=${Date.now()}`
-    }, 150)
+      liveFrameSrc.value = `${currentEsp32Url.value}/capture?_cb=${Date.now()}`
+    }, 180)
   }
   testImg.onerror = () => {
     streamConnecting.value = false
     streamError.value      = true
-    props.triggerToast(`⚠️ Gagal terhubung ke ESP32-CAM (${props.esp32Url})`)
+    isRealStreamOn.value   = false
+    props.triggerToast(`⚠️ Gagal terhubung ke ESP32-CAM (${currentEsp32Url.value}). Cek apakah satu WiFi.`)
   }
-  testImg.src = `${props.esp32Url}/capture?_cb=${Date.now()}`
+  testImg.src = `${currentEsp32Url.value}/capture?_cb=${Date.now()}`
 }
 
 /** Hentikan stream */
 const stopEsp32Stream = () => {
+  if (autoAiTimer) {
+    clearInterval(autoAiTimer)
+    autoAiTimer = null
+    isAutoAiActive.value = false
+  }
   if (streamInterval) { clearInterval(streamInterval); streamInterval = null }
   isRealStreamOn.value = false
+  hasReceivedFrame.value = false
   liveFrameSrc.value   = ''
   streamError.value    = false
   props.triggerToast('📹 ESP32-CAM stream dihentikan.')
@@ -341,6 +500,7 @@ const handleStreamError = () => {
 
 onUnmounted(() => {
   if (streamInterval) clearInterval(streamInterval)
+  if (autoAiTimer) clearInterval(autoAiTimer)
 })
 </script>
 
@@ -503,11 +663,26 @@ onUnmounted(() => {
   color: #ffffff !important;
 }
 
-/* Viewport Area */
+/* ═══ Main Camera Layout (Grid 2 Kolom: Kiri 4:3 Viewport & Kanan Panel Kontrol) ═══ */
+.camera-body-grid {
+  display: grid;
+  grid-template-columns: 1fr 290px;
+  gap: 18px;
+  align-items: stretch;
+}
+
+@media (max-width: 1080px) {
+  .camera-body-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Viewport Area (Rill 4:3 Aspek Rasio Kamera ESP32-CAM 640x480) */
 .viewport-wrapper {
   position: relative;
   width: 100%;
-  height: 380px;
+  aspect-ratio: 4 / 3;
+  max-height: 480px;
   background-color: #0b111e;
   border-radius: 12px;
   overflow: hidden;
@@ -515,157 +690,76 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.85);
+  margin: 0 auto;
 }
 
-.snapshot-flash {
-  animation: flash-anim 0.4s ease-out;
-}
-
-@keyframes flash-anim {
-  0% {
-    filter: brightness(2.5) contrast(1.5);
-  }
-  100% {
-    filter: brightness(1) contrast(1);
-  }
-}
-
-/* Conveyor Rollers Simulation */
-.conveyor-rollers {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
+/* ═══ Side Action Controls Panel (Sebelah Kanan Kamera) ═══ */
+.camera-side-panel {
+  background-color: var(--bg-card-subtle);
+  border: 1px solid var(--border-card);
+  border-radius: 12px;
+  padding: 14px;
   display: flex;
-  justify-content: space-around;
-  align-items: stretch;
-  opacity: 0.2;
-  pointer-events: none;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.roller {
-  width: 28px;
-  background: linear-gradient(90deg, #1e293b, #475569, #1e293b);
-  border-left: 1px solid #0f172a;
-  border-right: 1px solid #0f172a;
-}
-
-/* Egg Stage & Rendering */
-.egg-stage {
-  position: relative;
-  width: 220px;
-  height: 280px;
+.side-panel-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  z-index: 10;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-card);
 }
 
-.egg-model {
-  width: 130px;
-  height: 180px;
-  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-  transform: rotate(-90deg);
-  position: relative;
-  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-}
-
-/* Top-Light (Surface Cangkang) */
-.egg-model.top {
-  background: radial-gradient(circle at 35% 35%, #fce7cf 0%, #e2b083 45%, #9a6538 90%);
-}
-
-/* Candling (Interior Translucent Amber Glow) */
-.egg-model.candling {
-  background: radial-gradient(circle at 50% 50%, #fff7ed 0%, #fb923c 40%, #c2410c 80%, #7c2d12 100%);
-  box-shadow: 0 0 50px rgba(251, 146, 60, 0.8), inset 0 0 30px rgba(255, 237, 213, 0.6);
-}
-
-.candling-beam {
-  position: absolute;
-  width: 160px;
-  height: 160px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(251, 146, 60, 0.4) 0%, transparent 70%);
-  filter: blur(20px);
-  z-index: 5;
-}
-
-.air-cell-visual {
-  position: absolute;
-  top: 4px;
-  left: 20px;
-  right: 20px;
-  border-bottom: 2px dashed rgba(255, 255, 255, 0.7);
-  background: rgba(255, 255, 255, 0.25);
-  border-radius: 40% 40% 0 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.air-cell-label {
-  font-size: 0.55rem;
-  color: #ffffff;
-  font-family: var(--font-mono);
+.side-title {
+  font-size: 0.8rem;
   font-weight: 700;
-  text-shadow: 0 1px 2px #000;
-  transform: rotate(90deg);
+  color: var(--text-title);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
 }
 
-.yolk-shadow {
-  position: absolute;
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #ea580c 0%, #9a3412 80%);
-  top: 45%;
-  left: 35%;
-  filter: blur(6px);
-  opacity: 0.85;
+.side-panel-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
 }
 
-.defect-crack-mark {
-  position: absolute;
-  top: 25px;
-  left: 25px;
-  width: 70px;
-  height: 70px;
-  transform: rotate(90deg);
-}
-
-.crack-svg {
+.side-btn {
   width: 100%;
-  height: 100%;
-  filter: drop-shadow(0 0 3px #ff4757);
+  justify-content: flex-start;
+  padding: 8px 12px;
+  font-size: 0.78rem;
 }
 
-.defect-dirt-spot {
-  position: absolute;
-  width: 16px;
-  height: 22px;
-  border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
-  background: #3e2723;
-  top: 60px;
-  left: 70px;
-  filter: blur(1px);
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+.side-panel-footer {
+  padding-top: 8px;
+  border-top: 1px solid var(--border-card);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.side-panel-footer code {
+  color: var(--teal-primary);
+  font-weight: 700;
 }
 
 /* ═══ ESP32-CAM REAL STREAM STYLES ═══ */
 
-/* Gambar JPEG dari ESP32 yang mengisi penuh viewport */
+/* Gambar JPEG dari ESP32 yang mengisi penuh viewport secara rill (contain 4:3) */
 .esp32-live-img {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   z-index: 6;
-  image-rendering: auto;
+  background-color: #0b111e;
 }
 
 /* Overlay saat koneksi / error */
@@ -730,6 +824,53 @@ onUnmounted(() => {
 }
 .cam-btn-esp32-on svg {
   color: #ffffff !important;
+}
+
+/* Tombol Flash LED */
+.cam-btn-led-on {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  color: #ffffff !important;
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+  font-weight: 700;
+}
+.cam-btn-led-on svg {
+  color: #ffffff !important;
+  filter: drop-shadow(0 0 4px #fef08a);
+}
+
+.cam-btn-led-off {
+  background-color: rgba(245, 158, 11, 0.08) !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+  color: #f59e0b !important;
+}
+
+/* Tombol Auto AI */
+.cam-btn-ai-active {
+  background: linear-gradient(135deg, #059669, #10b981) !important;
+  color: #ffffff !important;
+  border-color: #10b981 !important;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+  font-weight: 700;
+}
+.cam-btn-ai-active svg {
+  color: #ffffff !important;
+  animation: spin 3s linear infinite;
+}
+
+.cam-btn-ai-inactive {
+  background-color: rgba(16, 185, 129, 0.08) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  color: #10b981 !important;
+}
+
+.infer-spinner {
+  width: 10px;
+  height: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
 }
 
 /* Tombol ESP32 — state CONNECTING */
@@ -957,22 +1098,7 @@ onUnmounted(() => {
   border-radius: 50%;
 }
 
-/* Camera Controls */
-.camera-controls {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.ctrl-buttons {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
+/* Camera Button Base Styles */
 .cam-btn {
   display: flex;
   align-items: center;
