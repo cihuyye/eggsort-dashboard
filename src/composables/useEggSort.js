@@ -305,6 +305,48 @@ export function useEggSort() {
       const code = decision.grade_code || 'MUTU_I'
 
       if (res.is_egg === false || code === 'NOT_EGG') {
+        currentEgg.value = {
+          eggId: 'BUKAN TELUR',
+          grade: 'BUKAN TELUR',
+          gradeLabel: 'OBJEK TIDAK VALID / BUKAN TELUR AYAM',
+          confidence: 0,
+          yoloProbability: 0,
+          actuator: 'Bypass (Aktuator Tidak Aktif / Diabaikan)',
+          sniAction: 'Objek di depan kamera tidak memenuhi parameter morfologi cangkang telur ayam konsumsi (SNI 3926:2023). Letakkan telur ayam di atas konveyor.',
+          triggerTime: `${res.clientLatencyMs || 15}ms`,
+          yoloDefectClass: 'unknown',
+          yoloDefectScore: 0,
+          length: 0,
+          lengthPx: 0,
+          width: 0,
+          widthPx: 0,
+          shapeIndex: 0,
+          meanBrightness: 0,
+          airDepthCm: 0,
+          shellIntegrity: 'Bukan Telur',
+          shellIntegritySub: 'Gagal validasi morfologi cangkang, rasio elipsoid, atau spektrum warna',
+          internalHaugh: '-',
+          internalHaughSub: 'Tidak Terdefinisi',
+          imageUrl: previewUrl || (files instanceof File ? URL.createObjectURL(files) : null),
+          detections: [],
+          criteria: [
+            {
+              title: 'Morfologi Kerabang',
+              desc: 'Objek bukan bentuk telur ayam konsumsi',
+              passed: false
+            },
+            {
+              title: 'Kromatis Cangkang',
+              desc: 'Karakteristik warna tidak sesuai cangkang telur',
+              passed: false
+            },
+            {
+              title: 'Standar SNI 3926:2023',
+              desc: 'Objek tidak terdaftar dalam mutu telur',
+              passed: false
+            }
+          ]
+        }
         triggerToast('⚠️ Peringatan: Objek pada citra tidak terdeteksi sebagai telur ayam valid.')
         return res
       }

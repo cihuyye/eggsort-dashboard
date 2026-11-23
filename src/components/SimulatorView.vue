@@ -216,7 +216,7 @@
               </div>
               <div>
                 <div class="llm-title">Auditor Mutu AI (Google Gemini)</div>
-                <div class="llm-model-badge">gemini-3.8-flash // SNI 3926:2023 Expert</div>
+                <div class="llm-model-badge">gemini-3.5-flash // SNI 3926:2023 Expert</div>
               </div>
             </div>
             <button class="chat-toggle-btn" @click="showChat = !showChat">

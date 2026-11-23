@@ -120,7 +120,7 @@
 
           <!-- Detection Tag -->
           <div class="hud-label-top">
-            <span class="label-class">{{ currentEgg.yoloDefectClass === 'good' ? 'EGG-OBJECT' : currentEgg.yoloDefectClass.toUpperCase() }}</span>
+            <span class="label-class">{{ currentEgg.grade === 'BUKAN TELUR' ? 'BUKAN TELUR' : (currentEgg.yoloDefectClass === 'good' ? 'EGG-OBJECT' : currentEgg.yoloDefectClass.toUpperCase()) }}</span>
             <span class="label-conf">{{ currentEgg.confidence }}%</span>
           </div>
 

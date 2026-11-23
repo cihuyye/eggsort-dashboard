@@ -98,6 +98,21 @@
           <span class="nav-text">Kontrol Simulator & Kalibrasi</span>
         </button>
 
+        <!-- 4. Auditor AI (Google Gemini) -->
+        <button
+          class="nav-item"
+          :class="{ active: activeTab === 'ai-chat' }"
+          @click="$emit('update:activeTab', 'ai-chat')"
+        >
+          <div class="icon-wrap">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" />
+            </svg>
+          </div>
+          <span class="nav-text">Auditor AI (Gemini)</span>
+          <span class="item-tag-ai">AI</span>
+        </button>
+
         <!-- 4. Parameter Mutu & Info Sistem -->
         <button
           class="nav-item"
@@ -392,6 +407,26 @@ defineEmits(['update:activeTab'])
   color: #10b981;
 }
 
+.item-tag-ai {
+  font-size: 0.52rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, rgba(5, 150, 105, 0.25), rgba(13, 148, 136, 0.25));
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+  letter-spacing: 0.05em;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
+}
+
+.nav-item.active .item-tag-ai {
+  background: #10b981;
+  color: #ffffff;
+  border-color: #10b981;
+}
+
 .item-tag-live {
   font-size: 0.50rem;
   font-weight: 800;
@@ -405,7 +440,27 @@ defineEmits(['update:activeTab'])
   animation: livePulse 2s ease-in-out infinite;
 }
 
-.nav-item.active .item-tag-live {
+.nav-item.active .item-tag-ai {
+  font-size: 0.52rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, rgba(5, 150, 105, 0.25), rgba(13, 148, 136, 0.25));
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+  letter-spacing: 0.05em;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
+}
+
+.nav-item.active .item-tag-ai {
+  background: #10b981;
+  color: #ffffff;
+  border-color: #10b981;
+}
+
+.item-tag-live {
   background: rgba(16, 185, 129, 0.2);
   color: #10b981;
   animation: none;
@@ -536,7 +591,7 @@ defineEmits(['update:activeTab'])
     width: 76px;
     min-width: 76px;
   }
-  .logo-text, .nav-label-row, .nav-text, .item-tag-sni, .polije-text, .active-badge-dot, .bottom-active-dot {
+  .logo-text, .nav-label-row, .nav-text, .item-tag-sni, .item-tag-ai, .polije-text, .active-badge-dot, .bottom-active-dot {
     display: none;
   }
   .sidebar-header {

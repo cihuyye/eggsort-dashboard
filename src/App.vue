@@ -105,7 +105,16 @@
           <HistoryAnalyticsView :triggerToast="triggerToast" />
         </div>
 
-        <!-- View 4: Extra Tabs (Calibration, System Info) -->
+        <!-- View 4: Dedicated Auditor AI / Konsultasi SNI (Shown when activeTab === 'ai-chat') -->
+        <div v-else-if="activeTab === 'ai-chat'">
+          <AiChatView
+            :currentEgg="currentEgg"
+            :apiOnline="apiOnline"
+            :triggerToast="triggerToast"
+          />
+        </div>
+
+        <!-- View 5: Extra Tabs (Calibration, System Info) -->
         <div v-else>
           <ExtraTabsView
             :activeTab="activeTab"
@@ -158,6 +167,7 @@ import ScanLogTable from './components/ScanLogTable.vue'
 import ExtraTabsView from './components/ExtraTabsView.vue'
 import HistoryAnalyticsView from './components/HistoryAnalyticsView.vue'
 import ProfileView from './components/ProfileView.vue'
+import AiChatView from './components/AiChatView.vue'
 import ToastNotification from './components/ToastNotification.vue'
 import EggDetailModal from './components/EggDetailModal.vue'
 import EggDecisionPopup from './components/EggDecisionPopup.vue'
